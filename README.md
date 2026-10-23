@@ -129,6 +129,8 @@ spiral/
 ## Credits
  
 NSL-KDD: M. Tavallaee, E. Bagheri, W. Lu and A. Ghorbani, "A detailed analysis of the KDD CUP 99 data set", 2009. Data copy on Kaggle by the user `dhoogla`.
+
+License: MIT
  
 *Author: Shlok*
  
