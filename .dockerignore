@@ -1,0 +1,9 @@
+venv/
+.venv*/
+data/
+notebooks/
+images/
+.git/
+__pycache__/
+models/random_forest.joblib
+models/logistic_regression.joblib
