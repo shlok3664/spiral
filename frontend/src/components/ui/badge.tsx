@@ -5,10 +5,10 @@ import { cn } from "../../lib/utils"
 type BadgeTone = "neutral" | "attack" | "warning" | "ok"
 
 const tones: Record<BadgeTone, string> = {
-  neutral: "border-ink bg-cream text-ink",
-  attack: "border-crimson bg-cream text-ink",
-  warning: "border-lime bg-lime text-ink",
-  ok: "border-forest bg-forest text-cream",
+  neutral: "border-border bg-surface text-text",
+  attack: "border-threat bg-surface text-threat",
+  warning: "border-border bg-surface text-muted",
+  ok: "border-primary bg-primary text-on-primary",
 }
 
 export function Badge({

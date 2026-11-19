@@ -1,21 +1,37 @@
+import { useState } from "react"
 import { LayoutDashboard } from "lucide-react"
 
 import { Dashboard } from "./components/dashboard"
 import { TopBar } from "./components/topbar"
 
 export default function App() {
+  const [theme, setTheme] = useState<"light" | "dark">(() =>
+    document.documentElement.dataset.theme === "dark" ? "dark" : "light",
+  )
+
+  const toggleTheme = () => {
+    const nextTheme = theme === "dark" ? "light" : "dark"
+    document.documentElement.dataset.theme = nextTheme
+    setTheme(nextTheme)
+    try {
+      window.localStorage.setItem("spiral-theme", nextTheme)
+    } catch {
+      // Theme selection remains active for this page view if storage is unavailable.
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-transparent text-ink">
-      <TopBar />
+    <div className="min-h-screen bg-transparent text-text">
+      <TopBar onToggleTheme={toggleTheme} theme={theme} />
       <Dashboard />
 
       <nav
         aria-label="Bottom navigation"
-        className="fixed inset-x-0 bottom-0 z-30 border-t-[1.5px] border-ink bg-cream px-4 pb-[env(safe-area-inset-bottom)] md:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 border-t-[1.5px] border-border bg-surface px-4 pb-[env(safe-area-inset-bottom)] md:hidden"
       >
         <a
           aria-current="page"
-          className="mx-auto flex min-h-14 max-w-24 flex-col items-center justify-center gap-1 bg-forest px-4 text-cream"
+          className="mx-auto flex min-h-14 max-w-24 flex-col items-center justify-center gap-1 bg-primary px-4 text-on-primary"
           href="#overview"
         >
           <LayoutDashboard aria-hidden="true" size={18} strokeWidth={1.7} />

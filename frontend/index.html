@@ -8,6 +8,21 @@
       content="Spiral network intrusion detection dashboard replaying NSL-KDD test traffic."
     />
     <title>Spiral | Network Detection</title>
+    <script>
+      (() => {
+        let theme;
+        try {
+          const saved = localStorage.getItem("spiral-theme");
+          if (saved === "light" || saved === "dark") theme = saved;
+        } catch {}
+        if (!theme) {
+          theme = window.matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light";
+        }
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

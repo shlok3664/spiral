@@ -3,23 +3,69 @@
 @tailwind utilities;
 
 :root {
-  --sand: #e8e0cf;
-  --cream: #f4efe4;
-  --ink: #16201b;
-  --forest: #1f4d3a;
-  --lime: #c9e265;
-  --crimson: #b3202f;
-  --stone: #cfc7b5;
+  --bg: #F2F5F0;
+  --surface: #FAFBF8;
+  --border: #D3DCD1;
+  --text: #1E2A25;
+  --muted: #5F6E66;
+  --primary: #3F6B58;
+  --soft: #D6E5CC;
+  --threat: #A8434F;
+  --stone: #C9D1C6;
+  --glossy: var(--surface);
+  --on-primary: #FAFBF8;
+  --on-soft: #1E2A25;
+  --on-glossy: var(--text);
+  --on-threat: #FAFBF8;
+  --focus: var(--primary);
+  --detection-start: var(--soft);
+  --detection-end: color-mix(in srgb, var(--soft) 88%, white 12%);
+  --page-gradient: linear-gradient(
+    135deg,
+    var(--bg) 0%,
+    color-mix(in srgb, var(--bg) 94%, var(--surface) 6%) 100%
+  );
+  --hero-gradient: linear-gradient(
+    135deg,
+    var(--primary) 0%,
+    color-mix(in srgb, var(--primary) 90%, white 10%) 100%
+  );
+  --detection-gradient: linear-gradient(180deg, var(--detection-start) 0%, var(--detection-end) 100%);
+  --backdrop: color-mix(in srgb, var(--text) 45%, transparent);
 
   color-scheme: light;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  font-family: "Geist Variable", "Geist", ui-sans-serif, system-ui, sans-serif;
   font-size: 14px;
-  color: var(--ink);
-  background: var(--sand);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  background-color: var(--bg);
+}
+
+:root[data-theme="dark"] {
+  --bg: #0F1413;
+  --surface: #161C1A;
+  --border: #2A3330;
+  --text: #F5F8F6;
+  --muted: #A5B0AA;
+  --primary: #2F5A49;
+  --threat: #E0606C;
+  --stone: #34403B;
+  --glossy: #F5F8F6;
+  --soft: var(--glossy);
+  --on-primary: #F5F8F6;
+  --on-soft: #0F1413;
+  --on-glossy: #0F1413;
+  --on-threat: #0F1413;
+  --focus: var(--muted);
+  --detection-start: var(--glossy);
+  --detection-end: #E4EAE6;
+  --backdrop: color-mix(in srgb, var(--bg) 65%, transparent);
+
+  color-scheme: dark;
 }
 
 * {
@@ -36,37 +82,39 @@ body,
 body {
   min-height: 100vh;
   margin: 0;
-  background: linear-gradient(115deg, var(--sand) 0%, var(--cream) 100%);
-  color: var(--ink);
+  background: var(--page-gradient);
+  color: var(--text);
 }
 
-button,
-a {
-  -webkit-tap-highlight-color: transparent;
+h1,
+h2,
+h3,
+h4 {
+  color: var(--text);
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
-button,
-a,
-select {
-  transition-duration: 140ms;
+:root[data-theme] *,
+:root[data-theme] *::before,
+:root[data-theme] *::after {
+  transition-property: color, background-color, border-color, outline-color, fill, stroke;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
 }
 
 :focus-visible {
-  outline: 2px solid var(--forest);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
 dialog::backdrop {
-  background: rgb(22 32 27 / 55%);
-}
-
-dialog {
-  box-shadow: none;
+  background: var(--backdrop);
 }
 
 ::selection {
-  background: var(--lime);
-  color: var(--ink);
+  background: var(--primary);
+  color: var(--on-primary);
 }
 
 .replay-scan {
@@ -78,7 +126,7 @@ dialog {
   position: absolute;
   inset: 0 auto 0 0;
   width: 22%;
-  background: var(--lime);
+  background: var(--primary);
   content: "";
   animation: replay-scan 9s ease-in-out infinite;
 }
@@ -87,16 +135,21 @@ dialog {
   animation-play-state: paused;
 }
 
-.alert-enter {
+:root[data-theme] .alert-enter {
   animation: alert-enter 520ms ease-out both;
+  transition:
+    transform 150ms ease-out,
+    color 200ms ease,
+    background-color 200ms ease,
+    border-color 200ms ease;
 }
 
-.bar-grow {
-  transition: width 600ms ease-out;
+:root[data-theme] .bar-grow {
+  transition: width 600ms ease-out, background-color 200ms ease;
 }
 
 .alert-drawer[open] {
-  animation: drawer-enter 560ms ease-out both;
+  animation: drawer-enter 150ms ease-out both;
 }
 
 @keyframes replay-scan {
@@ -133,10 +186,7 @@ dialog {
     transition: none !important;
   }
 
-  .replay-scan::after {
-    animation: none !important;
-  }
-
+  .replay-scan::after,
   .alert-drawer[open] {
     animation: none !important;
   }

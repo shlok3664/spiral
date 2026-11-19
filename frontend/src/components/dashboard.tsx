@@ -45,7 +45,7 @@ function useCountUp(target: number | null, enabled: boolean, precision = 0) {
 
     let frame = 0
     let startedAt = 0
-    const duration = 620
+    const duration = 700
     const factor = 10 ** precision
     const animate = (time: number) => {
       if (!startedAt) startedAt = time
@@ -67,13 +67,13 @@ function DashboardSkeleton() {
     <div aria-label="Loading replay data" className="space-y-5" role="status">
       <span className="sr-only">Loading replay data</span>
       <div className="grid gap-3 md:grid-cols-[2fr_1fr_1fr]">
-        <div className="h-52 animate-pulse border-[1.5px] border-ink bg-forest" />
-        <div className="h-52 animate-pulse border-[1.5px] border-ink bg-lime" />
-        <div className="h-52 animate-pulse border-[1.5px] border-ink bg-ink" />
+        <div className="h-52 animate-pulse border-[1.5px] border-border bg-primary" />
+        <div className="h-52 animate-pulse border-[1.5px] border-border bg-glossy" />
+        <div className="h-52 animate-pulse border-[1.5px] border-border bg-text" />
       </div>
       <div className="grid gap-5 lg:grid-cols-12">
-        <div className="h-56 animate-pulse border-[1.5px] border-ink bg-sand lg:col-span-7" />
-        <div className="h-56 animate-pulse border-[1.5px] border-ink bg-cream lg:col-span-5" />
+        <div className="h-56 animate-pulse border-[1.5px] border-border bg-surface lg:col-span-7" />
+        <div className="h-56 animate-pulse border-[1.5px] border-border bg-surface lg:col-span-5" />
       </div>
     </div>
   )
@@ -81,14 +81,14 @@ function DashboardSkeleton() {
 
 function ErrorState({ error, onRetry }: { error: string; onRetry: () => void }) {
   return (
-    <section aria-labelledby="dashboard-error" className="border-[1.5px] border-ink bg-cream p-6">
+    <section aria-labelledby="dashboard-error" className="border-[1.5px] border-border bg-surface p-6">
       <div className="flex items-start gap-3">
-        <AlertTriangle aria-hidden="true" className="mt-0.5 shrink-0" size={18} />
+        <AlertTriangle aria-hidden="true" className="mt-0.5 shrink-0 text-threat" size={18} />
         <div>
-          <h2 className="font-serif text-2xl text-ink" id="dashboard-error">
+          <h2 className="text-2xl" id="dashboard-error">
             Dashboard data could not be loaded
           </h2>
-          <p className="mt-1 text-[13px] text-ink opacity-70">{error}</p>
+          <p className="mt-1 text-[13px] text-muted">{error}</p>
           <Button className="mt-4" onClick={onRetry}>
             Retry
           </Button>
@@ -112,12 +112,12 @@ function ReplayStrip({
   onTogglePause: () => void
 }) {
   return (
-    <header className="sticky top-11 z-30 border-b-[1.5px] border-ink bg-cream">
+    <header className="sticky top-11 z-30 border-b-[1.5px] border-border bg-surface">
       <div className="mx-auto flex min-h-11 max-w-[1480px] items-center gap-2 px-4 sm:px-6 lg:px-8">
         <span className="min-w-0 flex-1 truncate text-[13px]">
           Replay of NSL-KDD test set
         </span>
-        <span aria-hidden="true" className="hidden text-ink opacity-60 md:inline">·</span>
+        <span aria-hidden="true" className="hidden text-muted md:inline">·</span>
         <span className="shrink-0 text-[13px] tabular-nums">
           {loading ? "Loading" : available ? `${formatCount(count)} flows` : "Unavailable"}
         </span>
@@ -125,7 +125,7 @@ function ReplayStrip({
           <Button
             aria-label={paused ? "Resume dashboard refresh" : "Pause dashboard refresh"}
             aria-pressed={paused}
-            className="ml-auto min-h-8 shrink-0 border-ink bg-sand px-2.5 py-1 text-[13px] md:ml-4"
+            className="ml-auto min-h-8 shrink-0 border-border bg-bg px-2.5 py-1 text-[13px] md:ml-4"
             onClick={onTogglePause}
           >
             {paused ? <Play aria-hidden="true" size={14} /> : <Pause aria-hidden="true" size={14} />}
@@ -135,7 +135,7 @@ function ReplayStrip({
       </div>
       <div
         aria-hidden="true"
-        className={`replay-scan h-1 border-t-[1.5px] border-ink ${paused || !available ? "is-paused" : ""}`}
+        className={`replay-scan h-1 border-t-[1.5px] border-border ${paused || !available ? "is-paused" : ""}`}
       />
     </header>
   )
@@ -154,30 +154,30 @@ function ReplayMetrics({
 }) {
   return (
     <section aria-label="Replay metrics" className="grid gap-3 md:grid-cols-[2fr_1fr_1fr]">
-      <div className="flex min-h-48 flex-col justify-between border-[1.5px] border-ink bg-forest-block p-5 text-cream md:min-h-56 md:p-6">
+      <div className="flex min-h-48 flex-col justify-between border-[1.5px] border-border bg-hero p-5 text-on-primary md:min-h-56 md:p-6">
         <p className="text-[13px]">Attacks flagged</p>
         <div aria-live="polite">
-          <p className="font-serif text-[72px] leading-[0.88] tabular-nums md:text-[120px]">
+          <p className="font-sans text-[64px] font-semibold leading-[0.88] tracking-[-0.02em] tabular-nums md:text-[112px]">
             {available ? formatCount(animatedAttacks) : "—"}
           </p>
           <p className="mt-3 text-[14px]">attacks flagged in the replay</p>
         </div>
       </div>
 
-      <div className="flex min-h-36 flex-col justify-between border-[1.5px] border-ink bg-lime-block p-5 text-ink md:min-h-56 md:p-6">
+      <div className="flex min-h-36 flex-col justify-between border-[1.5px] border-border bg-detection text-on-soft p-5 md:min-h-56 md:p-6">
         <p className="text-[13px]">Detection rate</p>
         <div>
-          <p className="font-serif text-5xl leading-none tabular-nums md:text-6xl">
+          <p className="font-sans text-5xl font-semibold leading-none tracking-[-0.02em] tabular-nums md:text-6xl">
             {available ? `${animatedDetectionRate.toFixed(1)}%` : "—"}
           </p>
           <p className="mt-3 text-[14px]">recall against replay labels</p>
         </div>
       </div>
 
-      <div className="flex min-h-36 flex-col justify-between border-[1.5px] border-ink bg-ink p-5 text-cream md:min-h-56 md:p-6">
+      <div className="flex min-h-36 flex-col justify-between border-[1.5px] border-border bg-text p-5 text-bg md:min-h-56 md:p-6">
         <p className="text-[13px]">False-positive rate</p>
         <div>
-          <p className="font-serif text-5xl leading-none tabular-nums md:text-6xl">
+          <p className="font-sans text-5xl font-semibold leading-none tracking-[-0.02em] tabular-nums md:text-6xl">
             {available ? `${animatedFalsePositiveRate.toFixed(1)}%` : "—"}
           </p>
           <p className="mt-3 text-[14px]">normal rows flagged</p>
@@ -193,7 +193,7 @@ function Confidence({ alert }: { alert: Alert }) {
 
   return (
     <span className="flex items-center justify-end gap-2">
-      <span className={`font-mono text-[13px] tabular-nums ${lowConfidence ? "bg-lime px-1" : ""}`}>
+      <span className={`font-mono text-[13px] tabular-nums ${lowConfidence ? "bg-soft px-1 text-on-soft" : ""}`}>
         {formatConfidence(value)}
       </span>
       <span
@@ -204,7 +204,7 @@ function Confidence({ alert }: { alert: Alert }) {
         className="h-1 w-12 bg-stone"
         role="progressbar"
       >
-        <span className="block h-full bg-crimson" style={{ width: `${value * 100}%` }} />
+        <span className="block h-full bg-threat" style={{ width: `${value * 100}%` }} />
       </span>
     </span>
   )
@@ -224,7 +224,7 @@ function AlertRow({
   return (
     <button
       aria-label={`Open replay row ${alert.row}, ${alert.category}${alert.category === "Normal" ? ", false positive" : ""}, ${alert.protocol} ${alert.service}, confidence ${formatConfidence(alert.confidence)}`}
-      className={`alert-enter relative grid w-full items-center gap-2 border-b-[1.5px] border-ink px-3 text-left text-ink transition-transform duration-500 ease-out hover:translate-x-[4px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-forest ${
+      className={`alert-enter relative grid w-full items-center gap-2 border-b-[1.5px] border-border px-3 text-left text-text hover:translate-x-[4px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus ${
         compact
           ? "grid-cols-[1fr_auto] py-3.5"
           : "grid-cols-[68px_minmax(138px,1.15fr)_minmax(0,1.6fr)_112px_18px] py-3"
@@ -233,14 +233,14 @@ function AlertRow({
       style={{ animationDelay: `${index * 40}ms` }}
       type="button"
     >
-      <span aria-hidden="true" className="absolute inset-y-0 left-0 w-[3px] bg-crimson" />
+      <span aria-hidden="true" className="absolute inset-y-0 left-0 w-[3px] bg-threat" />
       <span className="font-mono text-[13px] tabular-nums">
         #{alert.row.toString().padStart(5, "0")}
       </span>
       <span className="flex min-w-0 items-center justify-end gap-1.5 md:justify-start">
         <span className="truncate text-[13px]">{alert.category}</span>
         {alert.category === "Normal" && (
-          <span className="shrink-0 border border-crimson bg-crimson px-1 py-0.5 text-[10px] leading-none text-cream">
+          <span className="shrink-0 border border-threat bg-threat px-1 py-0.5 text-[10px] leading-none text-on-threat">
             False positive
           </span>
         )}
@@ -279,10 +279,10 @@ function AlertsPanel({
   return (
     <section
       aria-labelledby="alerts-heading"
-      className="min-w-0 self-start border-[1.5px] border-ink bg-sand lg:col-span-7"
+      className="min-w-0 self-start border-[1.5px] border-border bg-surface lg:col-span-7"
     >
-      <div className="flex items-baseline justify-between gap-3 border-b-[1.5px] border-ink px-4 py-3">
-        <h2 className="font-serif text-[26px] leading-tight" id="alerts-heading">
+      <div className="flex items-baseline justify-between gap-3 border-b-[1.5px] border-border px-4 py-3">
+        <h2 className="text-[26px] leading-tight" id="alerts-heading">
           Alerts needing review
         </h2>
         <span className="shrink-0 text-[13px] tabular-nums">
@@ -294,7 +294,7 @@ function AlertsPanel({
         <>
           <div
             aria-hidden="true"
-            className="hidden grid-cols-[68px_minmax(138px,1.15fr)_minmax(0,1.6fr)_112px_18px] border-b-[1.5px] border-ink px-3 py-2 text-[13px] md:grid"
+            className="hidden grid-cols-[68px_minmax(138px,1.15fr)_minmax(0,1.6fr)_112px_18px] border-b-[1.5px] border-border px-3 py-2 text-[13px] md:grid"
           >
             <span>Row ID</span>
             <span>Category</span>
@@ -352,9 +352,9 @@ function DetectionByCategory({
   }, [categories])
 
   return (
-    <section className="self-start border-[1.5px] border-ink bg-cream p-4 sm:p-5 lg:col-span-5">
+    <section className="self-start border-[1.5px] border-border bg-surface p-4 sm:p-5 lg:col-span-5">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="font-serif text-[26px] leading-tight">Detection by category</h2>
+        <h2 className="text-[26px] leading-tight">Detection by category</h2>
         <span className="text-[13px]">Caught / missed</span>
       </div>
 
@@ -377,7 +377,7 @@ function DetectionByCategory({
                   role="img"
                 >
                   <span
-                    className="bar-grow h-full bg-forest"
+                    className="bar-grow h-full bg-primary"
                     style={{ width: `${barsReady ? caught : 0}%` }}
                   />
                   <span
@@ -394,18 +394,18 @@ function DetectionByCategory({
           })}
         </ul>
       ) : (
-        <p className="mt-4 border-t-[1.5px] border-ink pt-4 text-[13px]">
+        <p className="mt-4 border-t-[1.5px] border-border pt-4 text-[13px]">
           Category results are unavailable for this replay.
         </p>
       )}
       {categories.length > 0 && (
-        <p className="mt-4 border-t-[1.5px] border-ink pt-3 text-[13px]">
+        <p className="mt-4 border-t-[1.5px] border-border pt-3 text-[13px]">
           Normal replay rows <span className="float-right font-mono tabular-nums">{formatCount(normalCount)}</span>
         </p>
       )}
-      <div className="mt-4 flex gap-4 border-t-[1.5px] border-ink pt-3 text-[13px]">
+      <div className="mt-4 flex gap-4 border-t-[1.5px] border-border pt-3 text-[13px]">
         <span className="flex items-center gap-2">
-          <span aria-hidden="true" className="h-2.5 w-2.5 bg-forest" />
+          <span aria-hidden="true" className="h-2.5 w-2.5 bg-primary" />
           Caught
         </span>
         <span className="flex items-center gap-2">
@@ -419,8 +419,8 @@ function DetectionByCategory({
 
 function ConfusionMatrixPanel({ matrix }: { matrix: ConfusionMatrix | null }) {
   return (
-    <section className="self-start border-[1.5px] border-ink bg-cream p-4 sm:p-5 lg:col-span-4">
-      <h2 className="font-serif text-[26px] leading-tight">Confusion matrix</h2>
+    <section className="self-start border-[1.5px] border-border bg-surface p-4 sm:p-5 lg:col-span-4">
+      <h2 className="text-[26px] leading-tight">Confusion matrix</h2>
       <p className="mt-1 text-[13px]">Replay labels vs model predictions</p>
       {matrix ? (
         <table
@@ -429,10 +429,10 @@ function ConfusionMatrixPanel({ matrix }: { matrix: ConfusionMatrix | null }) {
         >
           <thead>
             <tr>
-              <th className="w-[30%] border-b-[1.5px] border-ink p-2 text-left font-normal">
+              <th className="w-[30%] border-b-[1.5px] border-border p-2 text-left font-normal">
                 Actual
               </th>
-              <th className="border-b-[1.5px] border-ink p-2 font-normal" colSpan={2}>
+              <th className="border-b-[1.5px] border-border p-2 font-normal" colSpan={2}>
                 Predicted
               </th>
             </tr>
@@ -448,15 +448,15 @@ function ConfusionMatrixPanel({ matrix }: { matrix: ConfusionMatrix | null }) {
           <tbody>
             {matrix.values.map((row, rowIndex) => (
               <tr key={matrix.labels[rowIndex]}>
-                <th className="border-[1.5px] border-ink p-2 text-left font-normal">
+                <th className="border-[1.5px] border-border p-2 text-left font-normal">
                   {matrix.labels[rowIndex]}
                 </th>
                 {row.map((count, columnIndex) => {
                   const correct = rowIndex === columnIndex
                   return (
                     <td
-                      className={`border-[1.5px] border-ink p-3 font-mono text-lg tabular-nums ${
-                        correct ? "bg-forest text-cream" : "bg-crimson text-cream"
+                      className={`border-[1.5px] border-border p-3 font-mono text-lg tabular-nums ${
+                        correct ? "bg-primary text-on-primary" : "bg-threat text-on-threat"
                       }`}
                       key={matrix.labels[columnIndex]}
                     >
@@ -469,17 +469,17 @@ function ConfusionMatrixPanel({ matrix }: { matrix: ConfusionMatrix | null }) {
           </tbody>
         </table>
       ) : (
-        <p className="mt-4 border-t-[1.5px] border-ink pt-4 text-[13px]">
+        <p className="mt-4 border-t-[1.5px] border-border pt-4 text-[13px]">
           Confusion matrix is unavailable for this replay.
         </p>
       )}
-      <div className="mt-3 flex gap-4 border-t-[1.5px] border-ink pt-3 text-[13px]">
+      <div className="mt-3 flex gap-4 border-t-[1.5px] border-border pt-3 text-[13px]">
         <span className="flex items-center gap-2">
-          <span aria-hidden="true" className="h-2.5 w-2.5 bg-forest" />
+          <span aria-hidden="true" className="h-2.5 w-2.5 bg-primary" />
           Correct
         </span>
         <span className="flex items-center gap-2">
-          <span aria-hidden="true" className="h-2.5 w-2.5 bg-crimson" />
+          <span aria-hidden="true" className="h-2.5 w-2.5 bg-threat" />
           Error
         </span>
       </div>
@@ -489,9 +489,9 @@ function ConfusionMatrixPanel({ matrix }: { matrix: ConfusionMatrix | null }) {
 
 function ClassMetricsTable({ metrics }: { metrics: ClassMetric[] }) {
   return (
-    <section className="self-start border-[1.5px] border-ink bg-sand p-4 sm:p-5 lg:col-span-8">
+    <section className="self-start border-[1.5px] border-border bg-surface p-4 sm:p-5 lg:col-span-8">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="font-serif text-[26px] leading-tight">Per-class scores</h2>
+        <h2 className="text-[26px] leading-tight">Per-class scores</h2>
         <span className="text-[13px]">NSL-KDD replay</span>
       </div>
       {metrics.length ? (
@@ -500,7 +500,7 @@ function ClassMetricsTable({ metrics }: { metrics: ClassMetric[] }) {
             Precision, recall, and F1 score for binary model classes on the replay
           </caption>
           <thead>
-            <tr className="border-b-[1.5px] border-ink text-left">
+            <tr className="border-b-[1.5px] border-border text-left">
               <th className="w-[34%] py-2 pr-2 font-normal">Class</th>
               <th className="py-2 px-1 text-right font-normal">Precision</th>
               <th className="py-2 px-1 text-right font-normal">Recall</th>
@@ -509,7 +509,7 @@ function ClassMetricsTable({ metrics }: { metrics: ClassMetric[] }) {
           </thead>
           <tbody>
             {metrics.map((metric) => (
-              <tr className="border-b border-ink" key={metric.name}>
+              <tr className="border-b border-border" key={metric.name}>
                 <th className="py-3 pr-2 text-left font-normal">{metric.name}</th>
                 <td className="py-3 px-1 text-right font-mono tabular-nums">
                   {formatPercent(metric.precision)}
@@ -525,7 +525,7 @@ function ClassMetricsTable({ metrics }: { metrics: ClassMetric[] }) {
           </tbody>
         </table>
       ) : (
-        <p className="mt-4 border-t-[1.5px] border-ink pt-4 text-[13px]">
+        <p className="mt-4 border-t-[1.5px] border-border pt-4 text-[13px]">
           Per-class scores are unavailable for this replay.
         </p>
       )}
@@ -546,13 +546,13 @@ function AlertDrawer({ alert, onClose }: { alert: Alert | null; onClose: () => v
   return (
     <dialog
       aria-labelledby="alert-drawer-title"
-      className="alert-drawer fixed inset-y-0 right-0 m-0 ml-auto h-full max-h-none w-full max-w-[440px] border-[1.5px] border-ink bg-sand p-0 text-ink"
+      className="alert-drawer fixed inset-y-0 right-0 m-0 ml-auto h-full max-h-none w-full max-w-[440px] border-[1.5px] border-border bg-surface p-0 text-text"
       onClose={onClose}
       ref={dialogRef}
     >
       {alert && (
         <div className="flex h-full flex-col">
-          <header className="flex items-start justify-between gap-4 border-b-[1.5px] border-ink p-5">
+          <header className="flex items-start justify-between gap-4 border-b-[1.5px] border-border p-5">
             <div>
               <p className="text-[13px]">Replay row</p>
               <h2 className="mt-1 font-mono text-lg tabular-nums" id="alert-drawer-title">
@@ -561,7 +561,7 @@ function AlertDrawer({ alert, onClose }: { alert: Alert | null; onClose: () => v
             </div>
             <button
               aria-label="Close alert details"
-              className="p-2 transition-colors duration-150 hover:bg-lime"
+              className="p-2 hover:bg-bg"
               onClick={onClose}
               type="button"
             >
@@ -572,24 +572,24 @@ function AlertDrawer({ alert, onClose }: { alert: Alert | null; onClose: () => v
           <div className="flex-1 space-y-6 overflow-y-auto p-5">
             <div className="flex items-center justify-between gap-4">
               <span className="text-[13px]">Prediction</span>
-              <Badge className="border-l-[3px] border-l-crimson px-2" tone="attack">
+              <Badge className="border-l-[3px] border-l-threat px-2" tone="attack">
                 Attack
               </Badge>
             </div>
-            <div className="flex items-center justify-between gap-4 border-t-[1.5px] border-ink pt-4">
+            <div className="flex items-center justify-between gap-4 border-t-[1.5px] border-border pt-4">
               <span className="text-[13px]">Replay category</span>
               <span className="text-[13px]">{alert.category}</span>
             </div>
-            <div className="flex items-center justify-between gap-4 border-t-[1.5px] border-ink pt-4">
+            <div className="flex items-center justify-between gap-4 border-t-[1.5px] border-border pt-4">
               <span className="text-[13px]">Model confidence</span>
               <Confidence alert={alert} />
             </div>
 
-            <section aria-labelledby="flow-details-heading" className="border-t-[1.5px] border-ink pt-5">
-              <h3 className="font-serif text-2xl" id="flow-details-heading">
+            <section aria-labelledby="flow-details-heading" className="border-t-[1.5px] border-border pt-5">
+              <h3 className="text-2xl" id="flow-details-heading">
                 Flow details
               </h3>
-              <dl className="mt-3 divide-y divide-ink">
+              <dl className="mt-3 divide-y divide-border">
                 <div className="flex justify-between gap-4 py-3">
                   <dt className="text-[13px]">Protocol</dt>
                   <dd className="font-mono text-[13px]">{alert.protocol}</dd>
@@ -613,7 +613,7 @@ function AlertDrawer({ alert, onClose }: { alert: Alert | null; onClose: () => v
               </dl>
             </section>
 
-            <p className="border-t-[1.5px] border-ink pt-4 text-[13px] leading-5">
+            <p className="border-t-[1.5px] border-border pt-4 text-[13px] leading-5">
               This NSL-KDD data slice has no IP addresses or timestamps. The category and dataset
               label above come from the replay row.
             </p>
@@ -688,13 +688,13 @@ export function Dashboard() {
       />
       <main className="mx-auto max-w-[1480px] px-4 pb-8 pt-5 sm:px-6 lg:px-8 lg:pt-7">
         <div className="mb-4 flex items-center justify-between gap-4">
-          <h1 className="font-serif text-3xl leading-tight">Overview</h1>
+          <h1 className="text-3xl leading-tight">Overview</h1>
           <label className="flex items-center gap-2 text-[13px]">
             Range
             <span className="relative">
               <select
                 aria-label="Replay range"
-                className="min-h-9 appearance-none border-[1.5px] border-ink bg-cream py-1 pl-3 pr-8 text-[13px] focus:outline-none"
+                className="min-h-9 appearance-none border-[1.5px] border-border bg-surface py-1 pl-3 pr-8 text-[13px] focus:outline-none"
                 defaultValue="full"
               >
                 <option value="full">Full replay</option>
@@ -709,7 +709,7 @@ export function Dashboard() {
         </div>
 
         {error && stats && (
-          <div className="mb-4 flex items-center justify-between gap-4 border-[1.5px] border-ink bg-cream px-3 py-2.5 text-[13px]">
+          <div className="mb-4 flex items-center justify-between gap-4 border-[1.5px] border-border bg-surface px-3 py-2.5 text-[13px]">
             <span>Refresh failed: {error}</span>
             <Button className="shrink-0 px-2 py-1 text-[13px]" onClick={retry}>
               Retry
