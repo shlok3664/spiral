@@ -1,39 +1,19 @@
-import { useEffect, useState } from "react"
-import {
-  Activity,
-  AlertTriangle,
-  ArrowUpRight,
-  Database,
-  RefreshCw,
-  ShieldCheck,
-  ShieldEllipsis,
-} from "lucide-react"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { AlertTriangle, ChevronDown, ChevronRight, Pause, Play, X } from "lucide-react"
 import {
   Area,
   AreaChart,
   CartesianGrid,
-  Cell,
-  Pie,
-  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts"
 
-import { getAlerts, getMetrics, getStats } from "../api"
-import type { AlertsResponse, DashboardStats, MetricsResponse } from "../api"
+import { getAlerts, getStats } from "../api"
+import type { Alert, AlertsResponse, DashboardStats, TrafficPoint } from "../api"
 import { Badge } from "./ui/badge"
 import { Button } from "./ui/button"
-import { Card, CardContent, CardHeader } from "./ui/card"
-
-const categoryColors = [
-  "rgba(55, 214, 232, 0.32)",
-  "rgba(55, 214, 232, 0.46)",
-  "rgba(55, 214, 232, 0.60)",
-  "rgba(55, 214, 232, 0.78)",
-  "#37d6e8",
-]
 
 function formatCount(value: number | null) {
   return value === null ? "—" : new Intl.NumberFormat("en-US").format(value)
@@ -43,441 +23,595 @@ function formatPercent(value: number | null) {
   return value === null ? "—" : `${(value * 100).toFixed(1)}%`
 }
 
-function DashboardLoading() {
+function DashboardSkeleton() {
   return (
-    <div aria-label="Loading dashboard" className="space-y-6" role="status">
+    <div aria-label="Loading replay data" className="space-y-8" role="status">
       <span className="sr-only">Loading replay data</span>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="h-28 animate-pulse border-b border-border bg-surface" />
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         {Array.from({ length: 4 }, (_, index) => (
-          <div className="h-32 animate-pulse rounded-lg border border-line bg-panel" key={index} />
+          <div className="h-20 animate-pulse bg-surface" key={index} />
         ))}
       </div>
-      <div className="grid gap-4 xl:grid-cols-[1.6fr_1fr]">
-        <div className="h-80 animate-pulse rounded-lg border border-line bg-panel" />
-        <div className="h-80 animate-pulse rounded-lg border border-line bg-panel" />
-      </div>
-    </div>
-  )
-}
-
-function EmptyChart({ children }: { children: string }) {
-  return (
-    <div className="flex h-64 items-center justify-center rounded-md border border-dashed border-line px-6 text-center text-sm text-muted">
-      {children}
+      <div className="h-64 animate-pulse bg-surface" />
     </div>
   )
 }
 
 function ErrorState({ error, onRetry }: { error: string; onRetry: () => void }) {
   return (
-    <Card className="flex flex-col items-center px-6 py-14 text-center">
-      <span className="flex size-11 items-center justify-center rounded-full border border-cyan/20 bg-cyan/[0.08] text-cyan">
-        <AlertTriangle aria-hidden="true" size={20} />
+    <section aria-labelledby="dashboard-error" className="border-t border-border py-12">
+      <div className="flex items-start gap-3">
+        <AlertTriangle aria-hidden="true" className="mt-0.5 shrink-0 text-muted" size={18} />
+        <div>
+          <h2 className="text-base font-medium text-ink" id="dashboard-error">
+            Dashboard data could not be loaded
+          </h2>
+          <p className="mt-1 text-[13px] text-muted">{error}</p>
+          <Button className="mt-4" onClick={onRetry}>
+            Retry
+          </Button>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function ReplayStrip({
+  count,
+  loading,
+  paused,
+  available,
+  onTogglePause,
+}: {
+  count: number | null
+  loading: boolean
+  paused: boolean
+  available: boolean
+  onTogglePause: () => void
+}) {
+  return (
+    <div className="border-b border-border">
+      <div className="mx-auto flex min-h-11 max-w-[1480px] items-center gap-2 px-4 sm:px-6 lg:px-8">
+        <span className="min-w-0 truncate text-[13px] text-ink">
+          Replay of NSL-KDD test set
+        </span>
+        <span aria-hidden="true" className="text-muted">·</span>
+        <span className="shrink-0 text-[13px] tabular-nums text-muted">
+          {loading ? "Loading" : available ? `${formatCount(count)} flows` : "Unavailable"}
+        </span>
+        {available && (
+          <span className="ml-auto hidden text-[13px] text-ok sm:inline">Model healthy</span>
+        )}
+        {available && (
+          <Button
+            aria-label={paused ? "Resume dashboard refresh" : "Pause dashboard refresh"}
+            className="min-h-8 shrink-0 px-2.5 py-1 text-[13px] sm:ml-4"
+            onClick={onTogglePause}
+          >
+            {paused ? <Play aria-hidden="true" size={14} /> : <Pause aria-hidden="true" size={14} />}
+            <span>{paused ? "Resume" : "Pause"}</span>
+          </Button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function ReplayMetrics({ stats, available }: { stats: DashboardStats; available: boolean }) {
+  const metrics = [
+    {
+      label: "Attacks flagged",
+      value: available ? formatCount(stats.attacks_detected) : "—",
+      description: "attacks flagged in the replay",
+      hero: true,
+    },
+    {
+      label: "Detection rate",
+      value: available ? formatPercent(stats.detection_rate) : "—",
+      description: "Recall against replay labels",
+    },
+    {
+      label: "False-positive rate",
+      value: available ? formatPercent(stats.false_positive_rate) : "—",
+      description: "Normal rows flagged",
+    },
+    {
+      label: "Flows analyzed",
+      value: available ? formatCount(stats.total_flows) : "—",
+      description: "Rows in the replay set",
+    },
+  ]
+
+  return (
+    <section aria-label="Replay metrics" className="grid grid-cols-2 border-y border-border md:grid-cols-4">
+      {metrics.map((metric, index) => (
+        <div
+          className={`min-w-0 py-4 ${
+            index % 2 === 0 ? "border-r border-border pr-3" : "pl-3"
+          } ${index < 2 ? "border-b border-border" : ""} md:border-b-0 md:px-5 ${
+            index < 3 ? "md:border-r md:border-border" : "md:border-r-0"
+          } ${index === 0 ? "md:pl-0" : ""} ${index === 3 ? "md:pr-0" : ""}`}
+          key={metric.label}
+        >
+          <p className="text-[13px] text-muted">{metric.label}</p>
+          <p
+            className={`mt-1 tabular-nums leading-tight ${
+              metric.hero
+                ? `text-[36px] font-medium ${available ? "text-attack" : "text-ink"}`
+                : "text-[22px] font-medium text-ink"
+            }`}
+          >
+            {metric.value}
+          </p>
+          <p className="mt-1 text-[13px] text-muted">{metric.description}</p>
+        </div>
+      ))}
+    </section>
+  )
+}
+
+function Confidence({ alert }: { alert: Alert }) {
+  const value = Math.max(0, Math.min(1, alert.confidence))
+  const lowConfidence = value < 0.7
+  const tone = lowConfidence ? "warning" : "attack"
+
+  return (
+    <span className="flex items-center justify-end gap-2">
+      <span className={`font-mono text-[13px] tabular-nums ${lowConfidence ? "text-warning" : "text-attack"}`}>
+        {formatPercent(value)}
       </span>
-      <h2 className="mt-4 text-base font-semibold text-slate-100">Dashboard data unavailable</h2>
-      <p className="mt-2 max-w-lg text-sm leading-relaxed text-muted">{error}</p>
-      <Button className="mt-5" onClick={onRetry}>
-        <RefreshCw aria-hidden="true" size={14} />
-        Retry connection
-      </Button>
-    </Card>
+      <span
+        aria-label={`Confidence ${formatPercent(value)}`}
+        aria-valuemax={100}
+        aria-valuemin={0}
+        aria-valuenow={Math.round(value * 100)}
+        className="h-1 w-12 bg-border"
+        role="progressbar"
+      >
+        <span
+          className={`block h-full ${tone === "warning" ? "bg-warning" : "bg-attack"}`}
+          style={{ width: `${value * 100}%` }}
+        />
+      </span>
+    </span>
+  )
+}
+
+function AlertRow({
+  alert,
+  onSelect,
+  compact = false,
+}: {
+  alert: Alert
+  onSelect: (alert: Alert) => void
+  compact?: boolean
+}) {
+  return (
+    <button
+      aria-label={`Open replay row ${alert.row}, ${alert.category}, ${alert.protocol} ${alert.service}, confidence ${formatPercent(alert.confidence)}`}
+      className={`relative grid w-full items-center gap-2 border-b border-border px-3 text-left transition-colors duration-150 hover:bg-surface focus-visible:bg-surface ${
+        compact
+          ? "grid-cols-[1fr_auto] py-3"
+          : "grid-cols-[62px_74px_minmax(0,1fr)_112px_18px] py-3"
+      }`}
+      onClick={() => onSelect(alert)}
+      type="button"
+    >
+      <span aria-hidden="true" className="absolute inset-y-0 left-0 w-0.5 bg-attack" />
+      <span className="font-mono text-[13px] tabular-nums text-muted">
+        #{alert.row.toString().padStart(5, "0")}
+      </span>
+      <span className="truncate text-[13px] text-ink">{alert.category}</span>
+      <span className={compact ? "col-span-2 flex min-w-0 items-center justify-between gap-3" : "min-w-0"}>
+        {compact ? (
+          <>
+            <span className="truncate text-[13px] text-muted">
+              <span className="font-mono text-ink">{alert.protocol}</span>
+              <span className="mx-1.5">/</span>
+              {alert.service}
+            </span>
+            <Confidence alert={alert} />
+          </>
+        ) : (
+          <span className="truncate text-[13px] text-muted">
+            <span className="font-mono text-ink">{alert.protocol}</span>
+            <span className="mx-1.5">/</span>
+            {alert.service}
+          </span>
+        )}
+      </span>
+      {!compact && <Confidence alert={alert} />}
+      {!compact && <ChevronRight aria-hidden="true" className="justify-self-end text-muted" size={14} />}
+    </button>
+  )
+}
+
+function AlertsPanel({
+  response,
+  onSelect,
+}: {
+  response: AlertsResponse
+  onSelect: (alert: Alert) => void
+}) {
+  return (
+    <section aria-labelledby="alerts-heading" className="min-w-0">
+      <div className="mb-3 flex items-baseline justify-between gap-3">
+        <h2 className="text-base font-medium text-ink" id="alerts-heading">
+          Alerts needing review
+        </h2>
+        <span className="text-[13px] text-muted">
+          {response.status === "available" ? `${response.alerts.length} shown` : "Unavailable"}
+        </span>
+      </div>
+
+      {response.alerts.length ? (
+        <>
+          <div
+            aria-hidden="true"
+            className="hidden grid-cols-[62px_74px_minmax(0,1fr)_112px_18px] border-y border-border px-3 py-2 text-[13px] text-muted md:grid"
+          >
+            <span>Row ID</span>
+            <span>Category</span>
+            <span>Protocol / service</span>
+            <span className="text-right">Confidence</span>
+            <span />
+          </div>
+          <ul aria-label="Predicted attack alerts" className="hidden md:block">
+            {response.alerts.map((alert) => (
+              <li key={alert.row}>
+                <AlertRow alert={alert} onSelect={onSelect} />
+              </li>
+            ))}
+          </ul>
+          <ul aria-label="Predicted attack alerts" className="md:hidden">
+            {response.alerts.map((alert) => (
+              <li key={alert.row}>
+                <AlertRow alert={alert} compact onSelect={onSelect} />
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : (
+        <div className="border-y border-border py-8 text-[13px] text-muted">
+          {response.status === "available"
+            ? "No attack predictions in this replay."
+            : "No alerts until an NSL-KDD test set is available."}
+        </div>
+      )}
+    </section>
+  )
+}
+
+function CategoryBreakdown({ stats }: { stats: DashboardStats }) {
+  const categories = [...stats.categories].sort((a, b) => b.value - a.value)
+  const largest = Math.max(1, ...categories.map((category) => category.value))
+
+  return (
+    <section aria-labelledby="categories-heading">
+      <h2 className="text-base font-medium text-ink" id="categories-heading">
+        By category
+      </h2>
+      <p className="mt-1 text-[13px] text-muted">Replay labels · flow count</p>
+      {categories.length ? (
+        <ul className="mt-4 space-y-3">
+          {categories.map((category) => {
+            const normal = category.name === "Normal"
+            const width = `${(category.value / largest) * 100}%`
+            return (
+              <li key={category.name}>
+                <div className="flex items-baseline justify-between gap-3 text-[13px]">
+                  <span className="text-ink">{category.name}</span>
+                  <span className="tabular-nums text-muted">{formatCount(category.value)}</span>
+                </div>
+                <div aria-hidden="true" className="mt-1.5 h-1.5 bg-border">
+                  <div
+                    className={`h-full transition-[width] duration-150 ${normal ? "bg-[#65696e]" : "bg-attack"}`}
+                    style={{ width }}
+                  />
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      ) : (
+        <p className="mt-4 border-y border-border py-6 text-[13px] text-muted">
+          No labeled rows available.
+        </p>
+      )}
+    </section>
+  )
+}
+
+function TrafficChart({ points }: { points: TrafficPoint[] }) {
+  const data = points.map((point) => ({
+    ...point,
+    normal: Math.max(0, point.flows - point.attacks),
+  }))
+
+  return (
+    <section aria-labelledby="traffic-heading" className="border-t border-border pt-4">
+      <h2 className="text-base font-medium text-ink" id="traffic-heading">
+        Flows over replay batches
+      </h2>
+      <p className="mt-1 text-[13px] text-muted">
+        Rows in file order; the dataset has no timestamps
+      </p>
+      {data.length ? (
+        <>
+          <div aria-label="Stacked area chart of benign and flagged flows by replay batch" className="mt-4 h-44 w-full" role="img">
+            <ResponsiveContainer height="100%" width="100%">
+              <AreaChart data={data} margin={{ top: 6, right: 8, left: 0, bottom: 0 }}>
+                <CartesianGrid stroke="var(--border)" strokeDasharray="2 4" vertical={false} />
+                <XAxis
+                  axisLine={false}
+                  dataKey="bucket"
+                  tick={{ fill: "var(--text-muted)", fontSize: 12 }}
+                  tickFormatter={(value: number) => `B${value}`}
+                  tickLine={false}
+                  tickMargin={8}
+                />
+                <YAxis
+                  axisLine={false}
+                  tick={{ fill: "var(--text-muted)", fontSize: 12 }}
+                  tickLine={false}
+                  width={48}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: "var(--surface)",
+                    border: "1px solid var(--border)",
+                    borderRadius: 2,
+                    color: "var(--text)",
+                    fontSize: 13,
+                  }}
+                  formatter={(value: number, name: string | number) => [
+                    value.toLocaleString(),
+                    name === "attacks" ? "Flagged attacks" : "Benign flows",
+                  ]}
+                  labelFormatter={(value: number) => `Replay batch ${value}`}
+                />
+                <Area
+                  dataKey="normal"
+                  fill="#65696e"
+                  fillOpacity={0.28}
+                  name="normal"
+                  stackId="flows"
+                  stroke="#65696e"
+                  strokeWidth={1}
+                  type="monotone"
+                />
+                <Area
+                  dataKey="attacks"
+                  fill="var(--attack)"
+                  fillOpacity={0.62}
+                  name="attacks"
+                  stackId="flows"
+                  stroke="var(--attack)"
+                  strokeWidth={1}
+                  type="monotone"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="mt-2 flex gap-4 text-[13px] text-muted">
+            <span className="flex items-center gap-2">
+              <span aria-hidden="true" className="h-2 w-2 bg-[#65696e]" />
+              Benign flows
+            </span>
+            <span className="flex items-center gap-2">
+              <span aria-hidden="true" className="h-2 w-2 bg-attack" />
+              Flagged attacks
+            </span>
+          </div>
+        </>
+      ) : (
+        <p className="mt-4 border-y border-border py-6 text-[13px] text-muted">
+          No replay rows available to chart.
+        </p>
+      )}
+    </section>
+  )
+}
+
+function AlertDrawer({ alert, onClose }: { alert: Alert | null; onClose: () => void }) {
+  const dialogRef = useRef<HTMLDialogElement>(null)
+
+  useEffect(() => {
+    const dialog = dialogRef.current
+    if (!dialog) return
+    if (alert && !dialog.open) dialog.showModal()
+    if (!alert && dialog.open) dialog.close()
+  }, [alert])
+
+  return (
+    <dialog
+      aria-labelledby="alert-drawer-title"
+      className="fixed inset-y-0 right-0 m-0 ml-auto h-full max-h-none w-full max-w-[440px] border-l border-border bg-surface p-0 text-ink"
+      onClose={onClose}
+      ref={dialogRef}
+    >
+      {alert && (
+        <div className="flex h-full flex-col">
+          <header className="flex items-start justify-between gap-4 border-b border-border p-5">
+            <div>
+              <p className="text-[13px] text-muted">Replay row</p>
+              <h2 className="mt-1 font-mono text-lg tabular-nums" id="alert-drawer-title">
+                #{alert.row.toString().padStart(5, "0")}
+              </h2>
+            </div>
+            <button
+              aria-label="Close alert details"
+              className="p-2 text-muted transition-colors duration-150 hover:bg-[#202225] hover:text-ink"
+              onClick={onClose}
+              type="button"
+            >
+              <X aria-hidden="true" size={18} />
+            </button>
+          </header>
+
+          <div className="flex-1 space-y-6 overflow-y-auto p-5">
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-[13px] text-muted">Prediction</span>
+              <Badge tone="attack">Attack</Badge>
+            </div>
+            <div className="flex items-center justify-between gap-4 border-t border-border pt-4">
+              <span className="text-[13px] text-muted">Replay category</span>
+              <span className="text-[13px] text-ink">{alert.category}</span>
+            </div>
+            <div className="flex items-center justify-between gap-4 border-t border-border pt-4">
+              <span className="text-[13px] text-muted">Model confidence</span>
+              <Confidence alert={alert} />
+            </div>
+
+            <section aria-labelledby="flow-details-heading" className="border-t border-border pt-5">
+              <h3 className="text-sm font-medium" id="flow-details-heading">
+                Flow details
+              </h3>
+              <dl className="mt-3 divide-y divide-border">
+                <div className="flex justify-between gap-4 py-3">
+                  <dt className="text-[13px] text-muted">Protocol</dt>
+                  <dd className="font-mono text-[13px]">{alert.protocol}</dd>
+                </div>
+                <div className="flex justify-between gap-4 py-3">
+                  <dt className="text-[13px] text-muted">Service</dt>
+                  <dd className="text-[13px]">{alert.service}</dd>
+                </div>
+                <div className="flex justify-between gap-4 py-3">
+                  <dt className="text-[13px] text-muted">Source bytes</dt>
+                  <dd className="font-mono text-[13px] tabular-nums">{formatCount(alert.src_bytes)}</dd>
+                </div>
+                <div className="flex justify-between gap-4 py-3">
+                  <dt className="text-[13px] text-muted">Destination bytes</dt>
+                  <dd className="font-mono text-[13px] tabular-nums">{formatCount(alert.dst_bytes)}</dd>
+                </div>
+                <div className="flex justify-between gap-4 py-3">
+                  <dt className="text-[13px] text-muted">Dataset label</dt>
+                  <dd className="text-[13px]">{alert.true_label}</dd>
+                </div>
+              </dl>
+            </section>
+
+            <p className="border-t border-border pt-4 text-[13px] leading-5 text-muted">
+              This NSL-KDD data slice has no IP addresses or timestamps. The category and dataset
+              label above come from the replay row.
+            </p>
+          </div>
+        </div>
+      )}
+    </dialog>
   )
 }
 
 export function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [alerts, setAlerts] = useState<AlertsResponse | null>(null)
-  const [metrics, setMetrics] = useState<MetricsResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [paused, setPaused] = useState(false)
+  const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null)
   const [reloadToken, setReloadToken] = useState(0)
 
-  useEffect(() => {
-    let active = true
-    setLoading(true)
+  const refresh = useCallback(async (showLoading: boolean) => {
+    if (showLoading) setLoading(true)
     setError(null)
-    Promise.all([getStats(), getAlerts(8), getMetrics()])
-      .then(([nextStats, nextAlerts, nextMetrics]) => {
-        if (!active) return
-        setStats(nextStats)
-        setAlerts(nextAlerts)
-        setMetrics(nextMetrics)
-      })
-      .catch((cause: unknown) => {
-        if (!active) return
-        setError(cause instanceof Error ? cause.message : "The API request failed.")
-      })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
-    return () => {
-      active = false
+    try {
+      const [nextStats, nextAlerts] = await Promise.all([getStats(), getAlerts(8)])
+      setStats(nextStats)
+      setAlerts(nextAlerts)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "The API request failed.")
+    } finally {
+      if (showLoading) setLoading(false)
     }
-  }, [reloadToken])
+  }, [])
 
-  if (loading) return <DashboardLoading />
-  if (error) {
-    return <ErrorState error={error} onRetry={() => setReloadToken((token) => token + 1)} />
-  }
-  if (!stats || !alerts || !metrics) return null
+  useEffect(() => {
+    void refresh(true)
+  }, [refresh, reloadToken])
 
-  const replayAvailable = stats.status === "available" && alerts.status === "available"
-  const benchmark = metrics.models.find((model) => model.model === "XGBoost")
-  const kpis = [
-    {
-      label: "Flows analyzed",
-      value: replayAvailable ? formatCount(stats.total_flows) : "—",
-      detail: replayAvailable ? "Rows in the replay set" : "Replay dataset unavailable",
-      icon: Database,
-    },
-    {
-      label: "Attacks detected",
-      value: replayAvailable ? formatCount(stats.attacks_detected) : "—",
-      detail: "Predicted by the saved model",
-      icon: ShieldEllipsis,
-      tone: "text-red-400",
-    },
-    {
-      label: "Detection rate",
-      value: replayAvailable ? formatPercent(stats.detection_rate) : "—",
-      detail: "Recall against replay labels",
-      icon: ShieldCheck,
-    },
-    {
-      label: "False-positive rate",
-      value: replayAvailable ? formatPercent(stats.false_positive_rate) : "—",
-      detail: "Normal rows flagged as attacks",
-      icon: Activity,
-    },
-  ]
+  useEffect(() => {
+    if (paused) return
+    const interval = window.setInterval(() => void refresh(false), 30_000)
+    return () => window.clearInterval(interval)
+  }, [paused, refresh])
+
+  const replayAvailable =
+    stats?.status === "available" && alerts?.status === "available"
+  const retry = () => setReloadToken((token) => token + 1)
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div>
-          <div className="flex items-center gap-2">
-            <p className="text-xs font-medium uppercase tracking-[0.17em] text-muted">
-              Security overview
+    <div className="min-h-screen pb-20 md:pb-0" id="overview">
+      <ReplayStrip
+        available={Boolean(replayAvailable && !error)}
+        count={stats?.total_flows ?? null}
+        loading={loading}
+        onTogglePause={() => setPaused((value) => !value)}
+        paused={paused}
+      />
+      <main className="mx-auto max-w-[1480px] px-4 pb-8 pt-6 sm:px-6 lg:px-8 lg:pt-8">
+        <div className="mb-5 flex items-center justify-between gap-4">
+          <div>
+            <h1 className="text-xl font-medium text-ink">Overview</h1>
+            <p className="mt-1 text-[13px] text-muted">
+              Saved XGBoost pipeline · NSL-KDD flow classification
             </p>
-            <span className="size-1 rounded-full bg-slate-600" />
-            <p className="font-mono text-[11px] text-slate-500">NSL-KDD · binary classifier</p>
           </div>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-100 sm:text-[28px]">
-            Detection dashboard
-          </h1>
-          <p className="mt-1.5 max-w-2xl text-sm text-muted">
-            Network flow classification from the saved XGBoost pipeline.
-          </p>
+          <label className="flex items-center gap-2 text-[13px] text-muted">
+            Range
+            <span className="relative">
+              <select
+                aria-label="Replay range"
+                className="min-h-9 appearance-none border border-border bg-surface py-1 pl-3 pr-8 text-[13px] text-ink focus:outline-none"
+                defaultValue="full"
+              >
+                <option value="full">Full replay</option>
+              </select>
+              <ChevronDown
+                aria-hidden="true"
+                className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-muted"
+                size={14}
+              />
+            </span>
+          </label>
         </div>
-        <Button
-          aria-label="Refresh dashboard data"
-          onClick={() => setReloadToken((token) => token + 1)}
-        >
-          <RefreshCw aria-hidden="true" size={14} />
-          Refresh replay
-        </Button>
-      </div>
 
-      <div className="flex flex-wrap items-center gap-2 rounded-md border border-cyan/15 bg-cyan/[0.035] px-3.5 py-2.5">
-        <Badge tone={replayAvailable ? "cyan" : "neutral"}>
-          <span className={`size-1.5 rounded-full ${replayAvailable ? "bg-cyan" : "bg-slate-500"}`} />
-          {replayAvailable ? "Replay of NSL-KDD test set" : "Replay unavailable"}
-        </Badge>
-        {replayAvailable && stats.dataset_file && (
-          <span className="font-mono text-[11px] text-slate-500">{stats.dataset_file}</span>
+        {error && stats && (
+          <div className="mb-5 flex items-center justify-between gap-4 border border-border bg-surface px-3 py-2.5 text-[13px]">
+            <span className="text-muted">Refresh failed: {error}</span>
+            <Button className="shrink-0 px-2 py-1 text-[13px]" onClick={retry}>
+              Retry
+            </Button>
+          </div>
         )}
-        {!replayAvailable && (
-          <span className="text-xs text-muted">
-            Place KDDTest.parquet or KDDTest+.txt in the ignored data/ folder to enable replay.
-          </span>
-        )}
-        <span className="ml-auto text-[10px] uppercase tracking-[0.12em] text-slate-600">
-          Ordered dataset replay · not live network telemetry
-        </span>
-      </div>
 
-      <section aria-label="Replay metrics" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {kpis.map(({ label, value, detail, icon: Icon, tone }) => (
-          <Card className="min-w-0" key={label}>
-            <CardHeader className="pb-3">
-              <div>
-                <p className="text-xs font-medium text-muted">{label}</p>
-                <p className="mt-3 font-mono text-[27px] font-medium leading-none tracking-tight text-slate-100">
-                  {value}
-                </p>
-              </div>
-              <span className={`rounded-md border border-line bg-white/[0.02] p-2 ${tone ?? "text-slate-400"}`}>
-                <Icon aria-hidden="true" size={16} strokeWidth={1.8} />
-              </span>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <p className="text-[11px] text-slate-500">{detail}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </section>
-
-      <section aria-label="Replay charts" className="grid gap-4 xl:grid-cols-[1.6fr_1fr]">
-        <Card className="min-w-0">
-          <CardHeader className="pb-2">
-            <div>
-              <h2 className="text-sm font-semibold text-slate-100">Traffic across replay batches</h2>
-              <p className="mt-1 text-xs text-muted">
-                Test-set row order grouped into batches · not a time series
+        {loading && !stats ? (
+          <DashboardSkeleton />
+        ) : error && !stats ? (
+          <ErrorState error={error} onRetry={retry} />
+        ) : stats && alerts ? (
+          <>
+            <ReplayMetrics available={Boolean(replayAvailable)} stats={stats} />
+            {!replayAvailable && (
+              <p className="mt-3 text-[13px] text-muted">
+                Replay data is unavailable. Add the NSL-KDD test file under data/ to populate
+                dashboard metrics and charts.
               </p>
-            </div>
-            {replayAvailable && <Badge tone="cyan">Replay data</Badge>}
-          </CardHeader>
-          <CardContent>
-            {stats.traffic.length ? (
-              <div aria-label="Flow and predicted attack count by replay batch" className="h-64 w-full" role="img">
-                <ResponsiveContainer height="100%" width="100%">
-                  <AreaChart data={stats.traffic} margin={{ top: 10, right: 8, left: -18, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="flowFill" x1="0" x2="0" y1="0" y2="1">
-                        <stop offset="0%" stopColor="#37d6e8" stopOpacity={0.17} />
-                        <stop offset="95%" stopColor="#37d6e8" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid stroke="#1d2732" strokeDasharray="3 5" vertical={false} />
-                    <XAxis
-                      axisLine={false}
-                      dataKey="bucket"
-                      tick={{ fill: "#647384", fontSize: 10 }}
-                      tickLine={false}
-                      tickFormatter={(value: number) => `B${value}`}
-                      tickMargin={10}
-                    />
-                    <YAxis
-                      axisLine={false}
-                      tick={{ fill: "#647384", fontSize: 10 }}
-                      tickLine={false}
-                      tickMargin={8}
-                      width={44}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        background: "#0d1219",
-                        border: "1px solid #263341",
-                        borderRadius: 6,
-                        color: "#e2e8f0",
-                        fontSize: 12,
-                      }}
-                      formatter={(value: number, name: string) => [
-                        value.toLocaleString(),
-                        name === "flows" ? "Flows" : "Predicted attacks",
-                      ]}
-                      labelFormatter={(value: number) => `Replay batch ${value}`}
-                    />
-                    <Area
-                      dataKey="flows"
-                      fill="url(#flowFill)"
-                      name="flows"
-                      stroke="#37d6e8"
-                      strokeWidth={1.8}
-                      type="monotone"
-                    />
-                    <Area
-                      dataKey="attacks"
-                      fill="transparent"
-                      name="attacks"
-                      stroke="#37d6e8"
-                      strokeDasharray="4 4"
-                      strokeOpacity={0.55}
-                      strokeWidth={1.2}
-                      type="monotone"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            ) : (
-              <EmptyChart>No replay rows available to chart.</EmptyChart>
             )}
-            <div className="mt-2 flex items-center gap-4 border-t border-line pt-3 text-[10px] text-muted">
-              <span className="flex items-center gap-2">
-                <span className="h-0.5 w-3 bg-cyan" />
-                Flows
-              </span>
-              <span className="flex items-center gap-2">
-                <span className="h-0.5 w-3 border-t border-dashed border-cyan/60" />
-                Predicted attacks
-              </span>
-            </div>
-          </CardContent>
-        </Card>
 
-        <Card className="min-w-0">
-          <CardHeader className="pb-2">
-            <div>
-              <h2 className="text-sm font-semibold text-slate-100">Attack category breakdown</h2>
-              <p className="mt-1 text-xs text-muted">Dataset labels grouped by NSL-KDD family</p>
+            <div className="mt-7 grid min-w-0 gap-8 xl:grid-cols-[minmax(0,1.4fr)_minmax(280px,1fr)]">
+              <AlertsPanel onSelect={setSelectedAlert} response={alerts} />
+              <aside className="min-w-0 space-y-8">
+                <CategoryBreakdown stats={stats} />
+                <TrafficChart points={stats.traffic} />
+              </aside>
             </div>
-            {replayAvailable && <Badge tone="cyan">Replay data</Badge>}
-          </CardHeader>
-          <CardContent>
-            {stats.categories.some((category) => category.value > 0) ? (
-              <>
-                <div aria-label="NSL-KDD category distribution" className="h-64 w-full" role="img">
-                  <ResponsiveContainer height="100%" width="100%">
-                    <PieChart>
-                      <Pie
-                        data={stats.categories}
-                        dataKey="value"
-                        innerRadius={66}
-                        nameKey="name"
-                        outerRadius={94}
-                        paddingAngle={2}
-                        stroke="#0d1219"
-                        strokeWidth={3}
-                      >
-                        {stats.categories.map((category, index) => (
-                          <Cell fill={categoryColors[index % categoryColors.length]} key={category.name} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{
-                          background: "#0d1219",
-                          border: "1px solid #263341",
-                          borderRadius: 6,
-                          color: "#e2e8f0",
-                          fontSize: 12,
-                        }}
-                        formatter={(value: number) => [value.toLocaleString(), "Flows"]}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <ul aria-label="Category counts" className="grid grid-cols-2 gap-x-3 gap-y-2 border-t border-line pt-3">
-                  {stats.categories.map((category, index) => (
-                    <li className="flex min-w-0 items-center justify-between gap-2 text-[11px]" key={category.name}>
-                      <span className="flex min-w-0 items-center gap-2 text-slate-400">
-                        <span
-                          aria-hidden="true"
-                          className="size-1.5 shrink-0 rounded-full"
-                          style={{ backgroundColor: categoryColors[index % categoryColors.length] }}
-                        />
-                        <span className="truncate">{category.name}</span>
-                      </span>
-                      <span className="font-mono text-slate-300">{formatCount(category.value)}</span>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            ) : (
-              <EmptyChart>No labeled replay rows available for category counts.</EmptyChart>
-            )}
-          </CardContent>
-        </Card>
-      </section>
-
-      <section aria-label="Alert feed and benchmark" className="grid gap-4 xl:grid-cols-[1.6fr_1fr]">
-        <Card className="min-w-0">
-          <CardHeader className="pb-3">
-            <div>
-              <h2 className="text-sm font-semibold text-slate-100">Alert feed</h2>
-              <p className="mt-1 text-xs text-muted">Highest-confidence predicted attacks in this replay</p>
-            </div>
-            <Badge tone="red">
-              <span className="size-1.5 rounded-full bg-red-400" />
-              {alerts.alerts.length} shown
-            </Badge>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {alerts.alerts.length ? (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[560px] border-collapse text-left text-xs">
-                  <thead>
-                    <tr className="border-y border-line text-[10px] uppercase tracking-[0.12em] text-slate-500">
-                      <th className="py-2.5 pr-3 font-medium">Replay row</th>
-                      <th className="py-2.5 pr-3 font-medium">Protocol / service</th>
-                      <th className="py-2.5 pr-3 text-right font-medium">Bytes in / out</th>
-                      <th className="py-2.5 text-right font-medium">Confidence</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {alerts.alerts.map((alert) => {
-                      const highConfidence = alert.attack_probability >= 0.9
-                      return (
-                        <tr className="border-b border-line/70 last:border-0" key={alert.row}>
-                          <td className="py-3 pr-3 font-mono text-slate-400">
-                            <span
-                              className={`mr-2 inline-block size-1.5 rounded-full ${
-                                highConfidence ? "bg-red-400" : "bg-amber-400"
-                              }`}
-                            />
-                            #{alert.row.toString().padStart(5, "0")}
-                          </td>
-                          <td className="py-3 pr-3">
-                            <span className="font-mono uppercase text-slate-300">{alert.protocol}</span>
-                            <span className="ml-2 text-slate-500">{alert.service}</span>
-                          </td>
-                          <td className="py-3 pr-3 text-right font-mono text-slate-400">
-                            {formatCount(alert.src_bytes)} / {formatCount(alert.dst_bytes)}
-                          </td>
-                          <td className="py-3 text-right">
-                            <span className={`font-mono ${highConfidence ? "text-red-400" : "text-amber-400"}`}>
-                              {formatPercent(alert.attack_probability)}
-                            </span>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="flex min-h-32 items-center justify-center rounded-md border border-dashed border-line px-4 text-center text-sm text-muted">
-                {alerts.status === "available"
-                  ? "No attack predictions in this replay."
-                  : "No alerts until an NSL-KDD test set is available."}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="min-w-0">
-          <CardHeader className="pb-3">
-            <div>
-              <h2 className="text-sm font-semibold text-slate-100">Published XGBoost benchmark</h2>
-              <p className="mt-1 text-xs text-muted">Test results at the documented 0.5 cutoff</p>
-            </div>
-            <Badge tone="neutral">README</Badge>
-          </CardHeader>
-          <CardContent className="space-y-3 pt-0">
-            {benchmark ? (
-              <>
-                <div className="flex items-center justify-between border-t border-line pt-3 text-xs">
-                  <span className="text-muted">Accuracy</span>
-                  <span className="font-mono text-slate-200">{formatPercent(benchmark.accuracy)}</span>
-                </div>
-                <div className="flex items-center justify-between border-t border-line pt-3 text-xs">
-                  <span className="text-muted">Attack precision</span>
-                  <span className="font-mono text-slate-200">{formatPercent(benchmark.attack_precision)}</span>
-                </div>
-                <div className="flex items-center justify-between border-t border-line pt-3 text-xs">
-                  <span className="text-muted">Attack recall</span>
-                  <span className="font-mono text-slate-200">{formatPercent(benchmark.attack_recall)}</span>
-                </div>
-                <p className="border-t border-line pt-3 text-[11px] leading-relaxed text-slate-500">
-                  Published README result · separate from the current replay calculation.
-                </p>
-              </>
-            ) : (
-              <div className="flex min-h-32 items-center justify-center rounded-md border border-dashed border-line px-4 text-center text-sm text-muted">
-                No documented XGBoost benchmark found.
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </section>
-
-      <footer className="flex flex-col gap-2 border-t border-line pt-4 text-[10px] text-slate-600 sm:flex-row sm:items-center sm:justify-between">
-        <span>Spiral · NSL-KDD intrusion detection demo</span>
-        <span className="flex items-center gap-1.5 font-mono">
-          {replayAvailable ? "Replay data loaded" : "Replay dataset unavailable"}
-          <ArrowUpRight aria-hidden="true" size={11} />
-        </span>
-      </footer>
+          </>
+        ) : (
+          <ErrorState error="The API returned no dashboard data." onRetry={retry} />
+        )}
+      </main>
+      <AlertDrawer alert={selectedAlert} onClose={() => setSelectedAlert(null)} />
     </div>
   )
 }

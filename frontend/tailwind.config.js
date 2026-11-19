@@ -4,15 +4,19 @@ export default {
   theme: {
     extend: {
       colors: {
-        canvas: "#080b10",
-        panel: "#0d1219",
-        line: "#1d2732",
-        muted: "#81909f",
-        cyan: "#37d6e8",
+        canvas: "var(--bg)",
+        surface: "var(--surface)",
+        border: "var(--border)",
+        ink: "var(--text)",
+        muted: "var(--text-muted)",
+        accent: "var(--accent)",
+        attack: "var(--attack)",
+        warning: "var(--warning)",
+        ok: "var(--ok)",
       },
       fontFamily: {
-        sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
-        mono: ["JetBrains Mono", "ui-monospace", "SFMono-Regular", "monospace"],
+        sans: ["Geist Variable", "ui-sans-serif", "system-ui", "sans-serif"],
+        mono: ["Geist Mono Variable", "ui-monospace", "SFMono-Regular", "monospace"],
       },
     },
   },
