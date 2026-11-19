@@ -10,7 +10,7 @@ export function Button({
   return (
     <button
       className={cn(
-        "inline-flex items-center justify-center gap-2 border border-border bg-surface px-3 py-2 text-sm text-ink transition-colors duration-150 hover:bg-[#202225] disabled:cursor-not-allowed disabled:opacity-45",
+        "inline-flex items-center justify-center gap-2 border-[1.5px] border-ink bg-cream px-3 py-2 text-sm text-ink transition-colors duration-150 hover:bg-sand disabled:cursor-not-allowed disabled:opacity-60",
         className,
       )}
       type={type}

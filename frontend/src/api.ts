@@ -9,6 +9,13 @@ export interface CategoryCount {
   value: number
 }
 
+export interface CategoryDetection {
+  name: "DoS" | "Probe" | "R2L" | "U2R"
+  caught: number
+  missed: number
+  total: number
+}
+
 export interface DashboardStats {
   status: "available" | "unavailable"
   source: string
@@ -19,6 +26,7 @@ export interface DashboardStats {
   false_positive_rate: number | null
   traffic: TrafficPoint[]
   categories: CategoryCount[]
+  detection_by_category: CategoryDetection[]
 }
 
 export interface Alert {

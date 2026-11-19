@@ -74,6 +74,21 @@ def test_dashboard_replay_is_labeled_and_data_driven():
     assert {item["name"] for item in result["categories"]} == {
         "DoS", "Probe", "R2L", "U2R", "Normal"
     }
+    detection = result["detection_by_category"]
+    assert {item["name"] for item in detection} == {"DoS", "Probe", "R2L", "U2R"}
+    assert all(item["caught"] + item["missed"] == item["total"] for item in detection)
+
+
+def test_alert_feed_includes_a_variety_of_replay_categories():
+    if not (ROOT / "data" / "KDDTest+.txt").is_file() and not (
+        ROOT / "data" / "KDDTest.parquet"
+    ).is_file():
+        pytest.skip("No NSL-KDD test replay dataset is present.")
+
+    response = request("GET", "/api/alerts?limit=8")
+    assert response.status_code == 200
+    categories = {alert["category"] for alert in response.json()["alerts"]}
+    assert {"DoS", "Probe", "R2L", "U2R"}.issubset(categories)
 
 
 def test_metrics_identify_readme_as_source():

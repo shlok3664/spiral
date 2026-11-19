@@ -5,10 +5,10 @@ import { cn } from "../../lib/utils"
 type BadgeTone = "neutral" | "attack" | "warning" | "ok"
 
 const tones: Record<BadgeTone, string> = {
-  neutral: "border-border bg-surface text-muted",
-  attack: "border-attack text-attack",
-  warning: "border-warning text-warning",
-  ok: "border-ok text-ok",
+  neutral: "border-ink bg-cream text-ink",
+  attack: "border-crimson bg-cream text-ink",
+  warning: "border-lime bg-lime text-ink",
+  ok: "border-forest bg-forest text-cream",
 }
 
 export function Badge({
@@ -18,7 +18,7 @@ export function Badge({
 }: HTMLAttributes<HTMLSpanElement> & { tone?: BadgeTone }) {
   return (
     <span
-      className={cn("inline-flex items-center border px-2 py-1 text-xs", tones[tone], className)}
+      className={cn("inline-flex items-center border-[1.5px] px-2 py-1 text-xs", tones[tone], className)}
       {...props}
     />
   )

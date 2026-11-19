@@ -3,24 +3,23 @@
 @tailwind utilities;
 
 :root {
-  --bg: #0e0f11;
-  --surface: #151618;
-  --border: #26292d;
-  --text: #ecedee;
-  --text-muted: #9ba1a6;
-  --accent: #ecedee;
-  --attack: #f2555a;
-  --warning: #f5a524;
-  --ok: #3fb950;
+  --sand: #e8e0cf;
+  --cream: #f4efe4;
+  --ink: #16201b;
+  --forest: #1f4d3a;
+  --lime: #c9e265;
+  --crimson: #cf2e3e;
+  --stone: #cfc7b5;
 
-  color-scheme: dark;
+  color-scheme: light;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
   font-size: 14px;
-  background: var(--bg);
+  color: var(--ink);
+  background: var(--sand);
 }
 
 * {
@@ -37,8 +36,8 @@ body,
 body {
   min-height: 100vh;
   margin: 0;
-  background: var(--bg);
-  color: var(--text);
+  background: linear-gradient(115deg, var(--sand) 0%, var(--cream) 100%);
+  color: var(--ink);
 }
 
 button,
@@ -53,14 +52,75 @@ select {
 }
 
 :focus-visible {
-  outline: 2px solid var(--text);
+  outline: 2px solid var(--forest);
   outline-offset: 2px;
 }
 
 dialog::backdrop {
-  background: rgb(0 0 0 / 55%);
+  background: rgb(22 32 27 / 55%);
+}
+
+dialog {
+  box-shadow: none;
 }
 
 ::selection {
-  background: #3c4045;
+  background: var(--lime);
+  color: var(--ink);
+}
+
+.replay-scan {
+  position: relative;
+  overflow: hidden;
+}
+
+.replay-scan::after {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 22%;
+  background: var(--lime);
+  content: "";
+  animation: replay-scan 9s ease-in-out infinite;
+}
+
+.replay-scan.is-paused::after {
+  animation-play-state: paused;
+}
+
+.alert-enter {
+  animation: alert-enter 520ms ease-out both;
+}
+
+.bar-grow {
+  transition: width 600ms ease-out;
+}
+
+.alert-drawer[open] {
+  animation: drawer-enter 560ms ease-out both;
+}
+
+@keyframes replay-scan {
+  0% { transform: translateX(-110%); }
+  55%, 100% { transform: translateX(480%); }
+}
+
+@keyframes alert-enter {
+  from { opacity: 0; transform: translateX(-4px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes drawer-enter {
+  from { opacity: 0.6; transform: translateX(100%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }

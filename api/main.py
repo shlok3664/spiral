@@ -145,6 +145,7 @@ def get_stats():
             "false_positive_rate": None,
             "traffic": [],
             "categories": [],
+            "detection_by_category": [],
         }
 
     rows = replay["rows"]
@@ -157,6 +158,16 @@ def get_stats():
     for row in rows:
         category = row["category"]
         category_counts[category] = category_counts.get(category, 0) + 1
+    category_detection = {
+        name: {"name": name, "caught": 0, "missed": 0, "total": 0}
+        for name in ("DoS", "Probe", "R2L", "U2R")
+    }
+    for row in rows:
+        category = category_detection.get(row["category"])
+        if category is None:
+            continue
+        category["total"] += 1
+        category["caught" if row["label"] == "attack" else "missed"] += 1
 
     bucket_count = min(24, max(1, len(rows)))
     traffic = []
@@ -183,6 +194,7 @@ def get_stats():
             {"name": name, "value": category_counts.get(name, 0)}
             for name in ("DoS", "Probe", "R2L", "U2R", "Normal")
         ],
+        "detection_by_category": list(category_detection.values()),
     }
 
 
@@ -191,8 +203,27 @@ def get_alerts(limit: int = Query(default=10, ge=1, le=100)):
     replay = _replay()
     if replay is None:
         return {"status": "unavailable", "source": "Unavailable", "alerts": []}
-    alerts = [row for row in replay["rows"] if row["label"] == "attack"]
-    alerts.sort(key=lambda row: row["attack_probability"], reverse=True)
+    alerts_by_category = {name: [] for name in ("DoS", "Probe", "R2L", "U2R", "Normal", "Other")}
+    for row in replay["rows"]:
+        if row["label"] == "attack":
+            alerts_by_category[row["category"]].append(row)
+    for category_alerts in alerts_by_category.values():
+        category_alerts.sort(key=lambda row: row["attack_probability"], reverse=True)
+
+    alerts = []
+    category_order = tuple(alerts_by_category)
+    while len(alerts) < limit:
+        added = False
+        for category in category_order:
+            category_alerts = alerts_by_category[category]
+            if category_alerts:
+                alerts.append(category_alerts.pop(0))
+                added = True
+                if len(alerts) == limit:
+                    break
+        if not added:
+            break
+
     return {
         "status": "available",
         "source": _dataset_source(replay),

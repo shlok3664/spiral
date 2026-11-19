@@ -4,7 +4,7 @@ export function Sidebar() {
   return (
     <div className="flex h-full flex-col">
       <a
-        className="flex items-center gap-3 border-b border-border px-5 py-5 text-ink transition-colors duration-150 hover:bg-surface focus-visible:outline-none"
+        className="flex items-center gap-3 border-b-[1.5px] border-ink px-5 py-5 text-ink transition-colors duration-150 hover:bg-sand focus-visible:outline-none"
         href="#overview"
       >
         <Shield aria-hidden="true" size={20} strokeWidth={1.6} />
@@ -14,7 +14,7 @@ export function Sidebar() {
       <nav aria-label="Primary navigation" className="px-3 py-5">
         <a
           aria-current="page"
-          className="flex items-center gap-3 border border-border bg-surface px-3 py-2.5 text-sm text-ink transition-colors duration-150"
+          className="flex items-center gap-3 border-[1.5px] border-forest bg-forest px-3 py-2.5 text-sm text-cream transition-colors duration-150"
           href="#overview"
         >
           <LayoutDashboard aria-hidden="true" size={17} strokeWidth={1.7} />
@@ -22,7 +22,7 @@ export function Sidebar() {
         </a>
       </nav>
 
-      <div className="mt-auto border-t border-border p-4 text-[13px] leading-5 text-muted">
+      <div className="mt-auto border-t-[1.5px] border-ink p-4 text-[13px] leading-5 text-ink">
         NSL-KDD intrusion detection demo
       </div>
     </div>
