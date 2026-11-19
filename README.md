@@ -130,6 +130,10 @@ npm --prefix frontend install
 The UI runs at `http://localhost:5173` and the API at `http://127.0.0.1:8000`. Configure the frontend API URL in `frontend/.env` using `frontend/.env.example` as a template. Run API tests with `python -m pytest -rs`.
 
 The parity test uses the first 20 rows of `data/KDDTest+.txt` when that file is present. It is not included in the repository; without it, that specific test is skipped with a message. The available `data/KDDTest.parquet` is covered by a separate parity test.
+
+### Dashboard screenshot
+
+> Screenshot placeholder — add the reviewed Dashboard capture here.
  
 ## Repo structure
  

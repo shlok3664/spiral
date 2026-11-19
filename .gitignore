@@ -5,5 +5,7 @@ __pycache__/
 data/
 node_modules/
 **/node_modules/
+dist/
+*.tsbuildinfo
 .env
 **/.env
