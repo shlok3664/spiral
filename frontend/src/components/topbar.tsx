@@ -1,9 +1,11 @@
 import { LayoutDashboard, Moon, Shield, Sun } from "lucide-react"
 
 export function TopBar({
+  activePage,
   onToggleTheme,
   theme,
 }: {
+  activePage: "overview" | "analyze"
   onToggleTheme: () => void
   theme: "light" | "dark"
 }) {
@@ -21,14 +23,21 @@ export function TopBar({
           <span className="font-semibold">Spiral</span>
         </a>
 
-        <nav aria-label="Primary navigation" className="hidden md:block">
+        <nav aria-label="Primary navigation" className="hidden md:flex md:items-center md:gap-2">
           <a
-            aria-current="page"
-            className="flex items-center gap-2 border-[1.5px] border-primary bg-primary px-3 py-1.5 text-[13px] text-on-primary"
+            aria-current={activePage === "overview" ? "page" : undefined}
+            className={`flex items-center gap-2 border-[1.5px] px-3 py-1.5 text-[13px] ${activePage === "overview" ? "border-primary bg-primary text-on-primary" : "border-transparent text-text hover:bg-bg"}`}
             href="#overview"
           >
             <LayoutDashboard aria-hidden="true" size={15} strokeWidth={1.7} />
             Overview
+          </a>
+          <a
+            aria-current={activePage === "analyze" ? "page" : undefined}
+            className={`flex items-center gap-2 border-[1.5px] px-3 py-1.5 text-[13px] ${activePage === "analyze" ? "border-primary bg-primary text-on-primary" : "border-transparent text-text hover:bg-bg"}`}
+            href="#analyze"
+          >
+            Analyze
           </a>
         </nav>
         <button

@@ -118,18 +118,40 @@ streamlit run app.py
 
 ### React dashboard and API
 
-The API serves the saved `models/xgboost.joblib` pipeline. If available, `data/KDDTest.parquet` (or `data/KDDTest+.txt`) is replayed through that model for dashboard data. Metrics displayed as model benchmarks are the values documented in this README.
+The API serves the saved `models/xgboost.joblib` pipeline. If available, `data/KDDTest.parquet` (or `data/KDDTest+.txt`) is replayed through that model for Overview data. Metrics displayed as model benchmarks are the values documented in this README.
 
-Install the frontend dependencies once, then start both servers from the repository root:
+Install the Python and frontend dependencies once, then start both servers from the repository root:
 
-```bash
+```powershell
+python -m pip install -r requirements.txt
 npm --prefix frontend install
+Copy-Item frontend\.env.example frontend\.env
 .\dev.ps1
 ```
 
-The UI runs at `http://localhost:5173` and the API at `http://127.0.0.1:8000`. Configure the frontend API URL in `frontend/.env` using `frontend/.env.example` as a template. Run API tests with `python -m pytest -rs`.
+The UI runs at `http://127.0.0.1:5173` and the API at `http://127.0.0.1:8000`. The Vite `/api` proxy is used when `VITE_API_URL` is empty; set it in `frontend/.env` to use a separately hosted API. Run API tests with `python -m pytest -rs`.
 
 The parity test uses the first 20 rows of `data/KDDTest+.txt` when that file is present. It is not included in the repository; without it, that specific test is skipped with a message. The available `data/KDDTest.parquet` is covered by a separate parity test.
+
+#### Analyze uploads
+
+The Analyze page accepts `.csv`, `.tsv`, and `.txt` files up to **10 MB** and **50,000 rows**. Headered files must contain all 36 features used by the fitted pipeline; standard NSL-KDD files may include all 41 feature columns. Headerless NSL-KDD rows must have exactly 41 feature columns, 42 columns with a label, or 43 columns with a label and difficulty. Headered files can use either a comma or tab delimiter. Labeled files are evaluated as binary Normal/Attack predictions and their labels are grouped into Normal, DoS, Probe, R2L, and U2R for the category view.
+
+The included `sample/sample_connections.csv` is a labeled headered CSV example. Its first record is:
+
+```csv
+0,tcp,smtp,SF,914,329,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0.0,0.0,0.0,1.0,0.0,255,0.61,0.06,0.0,0.0,0.0,0.0,0.01,0.01,normal
+```
+
+For `flows.tsv`, use the same header and record above with tabs instead of commas. The same headered example is also accepted as `flows.txt`. Headerless `.txt` files use the NSL-KDD 41/42/43-column layout; this synthetic format example has 41 features, a label, and a difficulty value (it is not a model result):
+
+```text
+0,tcp,http,SF,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,neptune,0
+```
+
+A headerless labeled row without difficulty ends with `...,<class>`.
+
+**How it works:** upload → validate the format, schema, size, and values → reuse the saved preprocessing pipeline → score the complete file in one XGBoost batch → show a preview, label metrics when available, and a downloadable CSV. Unseen categorical values are handled by the fitted one-hot encoder and reported as warnings. Single-flow defaults and presets are calculated from `KDDTrain.parquet` when available; feature-importance explanations are global, not SHAP/per-flow explanations.
 
 ### Dashboard screenshot
 

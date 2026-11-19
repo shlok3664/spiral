@@ -38,12 +38,9 @@ def upload(filename, content, media_type="text/csv"):
 
 
 def make_headerless_row(column_count: int) -> str:
-    training = pd.read_parquet(TRAIN_DATA).iloc[0]
     values = []
     for column in NSL_KDD_FEATURE_COLUMNS:
-        if column in training.index:
-            values.append(str(training[column]))
-        elif column in {"protocol_type", "service", "flag"}:
+        if column in {"protocol_type", "service", "flag"}:
             values.append({"protocol_type": "tcp", "service": "http", "flag": "SF"}[column])
         else:
             values.append("0")
@@ -193,8 +190,11 @@ def test_sample_health_and_defaults_endpoints():
     defaults = request("GET", "/api/defaults")
     assert defaults.status_code == 200
     assert set(defaults.json()["categorical_columns"]) == {"protocol_type", "service", "flag"}
-    assert defaults.json()["defaults_source"] == "KDDTrain.parquet"
-    assert {"normal", "dos"}.issubset(defaults.json()["presets"])
+    if TRAIN_DATA.is_file():
+        assert defaults.json()["defaults_source"] == "KDDTrain.parquet"
+        assert {"normal", "dos"}.issubset(defaults.json()["presets"])
+    else:
+        assert defaults.json()["defaults_source"] == "saved preprocessing artifact"
 
 
 def test_single_predict_returns_global_explanation_and_unseen_category_warning():
@@ -231,7 +231,7 @@ def test_batch_predictions_match_direct_model_for_20_test_rows():
 
 
 def test_batch_parquet_rows_are_scored_in_one_model_call(monkeypatch):
-    rows = pd.read_parquet(ROOT / "data" / "KDDTest.parquet").head(20)
+    rows = pd.read_csv(ROOT / "sample" / "sample_connections.csv").head(20)
     calls = 0
     predict = main.predict_rows
 

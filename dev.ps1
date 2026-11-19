@@ -1,7 +1,11 @@
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
+$python = Join-Path $root "venv\Scripts\python.exe"
+if (-not (Test-Path $python)) {
+    $python = "python"
+}
 
-$api = Start-Process -FilePath "python" `
+$api = Start-Process -FilePath $python `
     -ArgumentList "-m uvicorn api.main:app --reload --host 127.0.0.1 --port 8000" `
     -WorkingDirectory $root -PassThru -NoNewWindow
 
@@ -10,7 +14,7 @@ $frontend = Start-Process -FilePath "npm.cmd" `
     -WorkingDirectory $root -PassThru -NoNewWindow
 
 Write-Host "Spiral API: http://127.0.0.1:8000"
-Write-Host "Spiral UI:  http://localhost:5173"
+Write-Host "Spiral UI:  http://127.0.0.1:5173"
 Write-Host "Press Ctrl+C to stop both servers."
 
 try {
