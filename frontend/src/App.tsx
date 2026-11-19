@@ -1,18 +1,13 @@
 import { LayoutDashboard } from "lucide-react"
 
 import { Dashboard } from "./components/dashboard"
-import { Sidebar } from "./components/sidebar"
+import { TopBar } from "./components/topbar"
 
 export default function App() {
   return (
     <div className="min-h-screen bg-transparent text-ink">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-56 border-r-[1.5px] border-ink bg-cream md:block">
-        <Sidebar />
-      </aside>
-
-      <div className="min-h-screen min-w-0 md:pl-56">
-        <Dashboard />
-      </div>
+      <TopBar />
+      <Dashboard />
 
       <nav
         aria-label="Bottom navigation"

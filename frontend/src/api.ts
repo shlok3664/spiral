@@ -16,6 +16,18 @@ export interface CategoryDetection {
   total: number
 }
 
+export interface ConfusionMatrix {
+  labels: ["Normal", "Attack"]
+  values: [[number, number], [number, number]]
+}
+
+export interface ClassMetric {
+  name: "Normal" | "Attack"
+  precision: number | null
+  recall: number | null
+  f1: number | null
+}
+
 export interface DashboardStats {
   status: "available" | "unavailable"
   source: string
@@ -27,6 +39,8 @@ export interface DashboardStats {
   traffic: TrafficPoint[]
   categories: CategoryCount[]
   detection_by_category: CategoryDetection[]
+  confusion_matrix: ConfusionMatrix | null
+  class_metrics: ClassMetric[]
 }
 
 export interface Alert {

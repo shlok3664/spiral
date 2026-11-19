@@ -1,23 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { AlertTriangle, ChevronDown, ChevronRight, Pause, Play, X } from "lucide-react"
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts"
-
 import { getAlerts, getStats } from "../api"
 import type {
   Alert,
   AlertsResponse,
   CategoryDetection,
+  ClassMetric,
+  ConfusionMatrix,
   DashboardStats,
-  TrafficPoint,
 } from "../api"
+
 import { Badge } from "./ui/badge"
 import { Button } from "./ui/button"
 
@@ -29,6 +21,11 @@ function formatPercent(value: number | null) {
   return value === null ? "—" : `${(value * 100).toFixed(1)}%`
 }
 
+function formatConfidence(value: number | null) {
+  if (value === null) return "—"
+  return value >= 0.9995 ? "99.9%+" : formatPercent(value)
+}
+
 function useCountUp(target: number | null, enabled: boolean, precision = 0) {
   const [value, setValue] = useState(0)
 
@@ -38,7 +35,10 @@ function useCountUp(target: number | null, enabled: boolean, precision = 0) {
       return
     }
 
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    if (
+      document.hidden ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
       setValue(target)
       return
     }
@@ -71,9 +71,9 @@ function DashboardSkeleton() {
         <div className="h-52 animate-pulse border-[1.5px] border-ink bg-lime" />
         <div className="h-52 animate-pulse border-[1.5px] border-ink bg-ink" />
       </div>
-      <div className="grid gap-5 lg:grid-cols-[1.45fr_1fr]">
-        <div className="h-80 animate-pulse border-[1.5px] border-ink bg-sand" />
-        <div className="h-80 animate-pulse border-[1.5px] border-ink bg-cream" />
+      <div className="grid gap-5 lg:grid-cols-12">
+        <div className="h-56 animate-pulse border-[1.5px] border-ink bg-sand lg:col-span-7" />
+        <div className="h-56 animate-pulse border-[1.5px] border-ink bg-cream lg:col-span-5" />
       </div>
     </div>
   )
@@ -112,14 +112,12 @@ function ReplayStrip({
   onTogglePause: () => void
 }) {
   return (
-    <header className="sticky top-0 z-30 border-b-[1.5px] border-ink bg-cream">
+    <header className="sticky top-11 z-30 border-b-[1.5px] border-ink bg-cream">
       <div className="mx-auto flex min-h-11 max-w-[1480px] items-center gap-2 px-4 sm:px-6 lg:px-8">
-        <span className="font-serif text-lg md:hidden">Spiral</span>
-        <span className="hidden text-[13px] md:inline">Replay of NSL-KDD test set</span>
-        <span aria-hidden="true" className="hidden text-ink opacity-60 md:inline">·</span>
-        <span className="min-w-0 truncate text-[13px] md:hidden">
+        <span className="min-w-0 flex-1 truncate text-[13px]">
           Replay of NSL-KDD test set
         </span>
+        <span aria-hidden="true" className="hidden text-ink opacity-60 md:inline">·</span>
         <span className="shrink-0 text-[13px] tabular-nums">
           {loading ? "Loading" : available ? `${formatCount(count)} flows` : "Unavailable"}
         </span>
@@ -196,10 +194,10 @@ function Confidence({ alert }: { alert: Alert }) {
   return (
     <span className="flex items-center justify-end gap-2">
       <span className={`font-mono text-[13px] tabular-nums ${lowConfidence ? "bg-lime px-1" : ""}`}>
-        {formatPercent(value)}
+        {formatConfidence(value)}
       </span>
       <span
-        aria-label={`Confidence ${formatPercent(value)}`}
+        aria-label={`Confidence ${formatConfidence(value)}`}
         aria-valuemax={100}
         aria-valuemin={0}
         aria-valuenow={Math.round(value * 100)}
@@ -225,11 +223,11 @@ function AlertRow({
 }) {
   return (
     <button
-      aria-label={`Open replay row ${alert.row}, ${alert.category}, ${alert.protocol} ${alert.service}, confidence ${formatPercent(alert.confidence)}`}
-      className={`alert-enter relative grid w-full items-center gap-2 border-b-[1.5px] border-ink px-3 text-left text-ink transition-transform duration-500 ease-out hover:translate-x-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-forest ${
+      aria-label={`Open replay row ${alert.row}, ${alert.category}${alert.category === "Normal" ? ", false positive" : ""}, ${alert.protocol} ${alert.service}, confidence ${formatConfidence(alert.confidence)}`}
+      className={`alert-enter relative grid w-full items-center gap-2 border-b-[1.5px] border-ink px-3 text-left text-ink transition-transform duration-500 ease-out hover:translate-x-[4px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-forest ${
         compact
           ? "grid-cols-[1fr_auto] py-3.5"
-          : "grid-cols-[68px_78px_minmax(0,1fr)_112px_18px] py-3"
+          : "grid-cols-[68px_minmax(138px,1.15fr)_minmax(0,1.6fr)_112px_18px] py-3"
       }`}
       onClick={() => onSelect(alert)}
       style={{ animationDelay: `${index * 40}ms` }}
@@ -239,7 +237,14 @@ function AlertRow({
       <span className="font-mono text-[13px] tabular-nums">
         #{alert.row.toString().padStart(5, "0")}
       </span>
-      <span className="truncate text-[13px]">{alert.category}</span>
+      <span className="flex min-w-0 items-center justify-end gap-1.5 md:justify-start">
+        <span className="truncate text-[13px]">{alert.category}</span>
+        {alert.category === "Normal" && (
+          <span className="shrink-0 border border-crimson bg-crimson px-1 py-0.5 text-[10px] leading-none text-cream">
+            False positive
+          </span>
+        )}
+      </span>
       <span className={compact ? "col-span-2 flex min-w-0 items-center justify-between gap-3" : "min-w-0"}>
         {compact ? (
           <>
@@ -274,7 +279,7 @@ function AlertsPanel({
   return (
     <section
       aria-labelledby="alerts-heading"
-      className="min-w-0 border-[1.5px] border-ink bg-sand"
+      className="min-w-0 self-start border-[1.5px] border-ink bg-sand lg:col-span-7"
     >
       <div className="flex items-baseline justify-between gap-3 border-b-[1.5px] border-ink px-4 py-3">
         <h2 className="font-serif text-[26px] leading-tight" id="alerts-heading">
@@ -289,7 +294,7 @@ function AlertsPanel({
         <>
           <div
             aria-hidden="true"
-            className="hidden grid-cols-[68px_78px_minmax(0,1fr)_112px_18px] border-b-[1.5px] border-ink px-3 py-2 text-[13px] md:grid"
+            className="hidden grid-cols-[68px_minmax(138px,1.15fr)_minmax(0,1.6fr)_112px_18px] border-b-[1.5px] border-ink px-3 py-2 text-[13px] md:grid"
           >
             <span>Row ID</span>
             <span>Category</span>
@@ -334,12 +339,20 @@ function DetectionByCategory({
   const largest = Math.max(1, ...categories.map((category) => category.total))
 
   useEffect(() => {
+    if (
+      document.hidden ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      setBarsReady(true)
+      return
+    }
+
     const frame = window.requestAnimationFrame(() => setBarsReady(true))
     return () => window.cancelAnimationFrame(frame)
   }, [categories])
 
   return (
-    <section className="border-[1.5px] border-ink bg-cream p-4 sm:p-5">
+    <section className="self-start border-[1.5px] border-ink bg-cream p-4 sm:p-5 lg:col-span-5">
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="font-serif text-[26px] leading-tight">Detection by category</h2>
         <span className="text-[13px]">Caught / missed</span>
@@ -404,95 +417,116 @@ function DetectionByCategory({
   )
 }
 
-function TrafficChart({ points }: { points: TrafficPoint[] }) {
-  const data = points.map((point) => ({
-    ...point,
-    normal: Math.max(0, point.flows - point.attacks),
-  }))
-
+function ConfusionMatrixPanel({ matrix }: { matrix: ConfusionMatrix | null }) {
   return (
-    <section className="border-[1.5px] border-ink bg-sand p-4 sm:p-5">
-      <h2 className="font-serif text-[26px] leading-tight">Flows across replay batches</h2>
-      <p className="mt-1 text-[13px]">
-        Rows in file order; the dataset has no timestamps
-      </p>
-      {data.length ? (
-        <>
-          <div
-            aria-label="Stacked area chart of benign and flagged flows by replay batch"
-            className="mt-4 h-40 w-full"
-            role="img"
-          >
-            <ResponsiveContainer height="100%" width="100%">
-              <AreaChart data={data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-                <CartesianGrid stroke="var(--stone)" strokeDasharray="2 4" vertical={false} />
-                <XAxis
-                  axisLine={{ stroke: "var(--ink)" }}
-                  dataKey="bucket"
-                  tick={{ fill: "var(--ink)", fontSize: 12 }}
-                  tickFormatter={(value: number) => `B${value}`}
-                  tickLine={false}
-                  tickMargin={7}
-                />
-                <YAxis
-                  axisLine={false}
-                  tick={{ fill: "var(--ink)", fontSize: 12 }}
-                  tickLine={false}
-                  width={42}
-                />
-                <Tooltip
-                  contentStyle={{
-                    background: "var(--cream)",
-                    border: "1.5px solid var(--ink)",
-                    borderRadius: 0,
-                    color: "var(--ink)",
-                    fontSize: 13,
-                  }}
-                  formatter={(value: number, name: string | number) => [
-                    value.toLocaleString(),
-                    name === "attacks" ? "Flagged attacks" : "Benign flows",
-                  ]}
-                  labelFormatter={(value: number) => `Replay batch ${value}`}
-                />
-                <Area
-                  dataKey="normal"
-                  fill="var(--stone)"
-                  fillOpacity={0.75}
-                  isAnimationActive={false}
-                  name="normal"
-                  stackId="flows"
-                  stroke="var(--ink)"
-                  strokeWidth={1}
-                  type="monotone"
-                />
-                <Area
-                  dataKey="attacks"
-                  fill="var(--crimson)"
-                  fillOpacity={0.9}
-                  isAnimationActive={false}
-                  name="attacks"
-                  stackId="flows"
-                  stroke="var(--crimson)"
-                  strokeWidth={1}
-                  type="monotone"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="mt-2 flex gap-4 text-[13px]">
-            <span className="flex items-center gap-2">
-              <span aria-hidden="true" className="h-2.5 w-2.5 bg-stone" />
-              Benign flows
-            </span>
-            <span className="flex items-center gap-2">
-              <span aria-hidden="true" className="h-2.5 w-2.5 bg-crimson" />
-              Flagged attacks
-            </span>
-          </div>
-        </>
+    <section className="self-start border-[1.5px] border-ink bg-cream p-4 sm:p-5 lg:col-span-4">
+      <h2 className="font-serif text-[26px] leading-tight">Confusion matrix</h2>
+      <p className="mt-1 text-[13px]">Replay labels vs model predictions</p>
+      {matrix ? (
+        <table
+          aria-label="Confusion matrix with actual labels in rows and predictions in columns"
+          className="mt-4 w-full table-fixed border-collapse text-center text-[13px]"
+        >
+          <thead>
+            <tr>
+              <th className="w-[30%] border-b-[1.5px] border-ink p-2 text-left font-normal">
+                Actual
+              </th>
+              <th className="border-b-[1.5px] border-ink p-2 font-normal" colSpan={2}>
+                Predicted
+              </th>
+            </tr>
+            <tr>
+              <th />
+              {matrix.labels.map((label) => (
+                <th className="p-2 font-normal" key={label}>
+                  {label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {matrix.values.map((row, rowIndex) => (
+              <tr key={matrix.labels[rowIndex]}>
+                <th className="border-[1.5px] border-ink p-2 text-left font-normal">
+                  {matrix.labels[rowIndex]}
+                </th>
+                {row.map((count, columnIndex) => {
+                  const correct = rowIndex === columnIndex
+                  return (
+                    <td
+                      className={`border-[1.5px] border-ink p-3 font-mono text-lg tabular-nums ${
+                        correct ? "bg-forest text-cream" : "bg-crimson text-cream"
+                      }`}
+                      key={matrix.labels[columnIndex]}
+                    >
+                      {formatCount(count)}
+                    </td>
+                  )
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       ) : (
         <p className="mt-4 border-t-[1.5px] border-ink pt-4 text-[13px]">
-          No replay rows available to chart.
+          Confusion matrix is unavailable for this replay.
+        </p>
+      )}
+      <div className="mt-3 flex gap-4 border-t-[1.5px] border-ink pt-3 text-[13px]">
+        <span className="flex items-center gap-2">
+          <span aria-hidden="true" className="h-2.5 w-2.5 bg-forest" />
+          Correct
+        </span>
+        <span className="flex items-center gap-2">
+          <span aria-hidden="true" className="h-2.5 w-2.5 bg-crimson" />
+          Error
+        </span>
+      </div>
+    </section>
+  )
+}
+
+function ClassMetricsTable({ metrics }: { metrics: ClassMetric[] }) {
+  return (
+    <section className="self-start border-[1.5px] border-ink bg-sand p-4 sm:p-5 lg:col-span-8">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="font-serif text-[26px] leading-tight">Per-class scores</h2>
+        <span className="text-[13px]">NSL-KDD replay</span>
+      </div>
+      {metrics.length ? (
+        <table className="mt-4 w-full table-fixed border-collapse text-[13px]">
+          <caption className="sr-only">
+            Precision, recall, and F1 score for binary model classes on the replay
+          </caption>
+          <thead>
+            <tr className="border-b-[1.5px] border-ink text-left">
+              <th className="w-[34%] py-2 pr-2 font-normal">Class</th>
+              <th className="py-2 px-1 text-right font-normal">Precision</th>
+              <th className="py-2 px-1 text-right font-normal">Recall</th>
+              <th className="py-2 pl-1 text-right font-normal">F1</th>
+            </tr>
+          </thead>
+          <tbody>
+            {metrics.map((metric) => (
+              <tr className="border-b border-ink" key={metric.name}>
+                <th className="py-3 pr-2 text-left font-normal">{metric.name}</th>
+                <td className="py-3 px-1 text-right font-mono tabular-nums">
+                  {formatPercent(metric.precision)}
+                </td>
+                <td className="py-3 px-1 text-right font-mono tabular-nums">
+                  {formatPercent(metric.recall)}
+                </td>
+                <td className="py-3 pl-1 text-right font-mono tabular-nums">
+                  {formatPercent(metric.f1)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p className="mt-4 border-t-[1.5px] border-ink pt-4 text-[13px]">
+          Per-class scores are unavailable for this replay.
         </p>
       )}
     </section>
@@ -644,7 +678,7 @@ export function Dashboard() {
   const normalCount = stats?.categories.find((category) => category.name === "Normal")?.value ?? 0
 
   return (
-    <div className="min-h-screen pb-20 md:pb-0" id="overview">
+    <div className="min-h-screen pb-20 md:pb-0">
       <ReplayStrip
         available={Boolean(replayAvailable && !error)}
         count={stats?.total_flows ?? null}
@@ -702,15 +736,14 @@ export function Dashboard() {
               </p>
             )}
 
-            <div className="mt-5 grid min-w-0 gap-5 lg:grid-cols-[1.45fr_1fr]">
+            <div className="mt-5 grid min-w-0 items-start gap-5 lg:grid-cols-12">
               <AlertsPanel onSelect={setSelectedAlert} response={alerts} />
-              <aside className="min-w-0 space-y-5">
-                <DetectionByCategory
-                  categories={stats.detection_by_category}
-                  normalCount={normalCount}
-                />
-                <TrafficChart points={stats.traffic} />
-              </aside>
+              <DetectionByCategory
+                categories={stats.detection_by_category}
+                normalCount={normalCount}
+              />
+              <ConfusionMatrixPanel matrix={stats.confusion_matrix} />
+              <ClassMetricsTable metrics={stats.class_metrics} />
             </div>
           </>
         ) : (

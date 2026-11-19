@@ -8,7 +8,7 @@
   --ink: #16201b;
   --forest: #1f4d3a;
   --lime: #c9e265;
-  --crimson: #cf2e3e;
+  --crimson: #b3202f;
   --stone: #cfc7b5;
 
   color-scheme: light;
@@ -122,5 +122,22 @@ dialog {
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+
+  .alert-enter {
+    animation: none !important;
+    animation-delay: 0s !important;
+  }
+
+  .bar-grow {
+    transition: none !important;
+  }
+
+  .replay-scan::after {
+    animation: none !important;
+  }
+
+  .alert-drawer[open] {
+    animation: none !important;
   }
 }

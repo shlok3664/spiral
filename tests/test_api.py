@@ -77,6 +77,15 @@ def test_dashboard_replay_is_labeled_and_data_driven():
     detection = result["detection_by_category"]
     assert {item["name"] for item in detection} == {"DoS", "Probe", "R2L", "U2R"}
     assert all(item["caught"] + item["missed"] == item["total"] for item in detection)
+    matrix = result["confusion_matrix"]
+    assert matrix["labels"] == ["Normal", "Attack"]
+    assert sum(sum(row) for row in matrix["values"]) == result["total_flows"]
+    assert [item["name"] for item in result["class_metrics"]] == ["Normal", "Attack"]
+    assert all(
+        0 <= item[metric] <= 1
+        for item in result["class_metrics"]
+        for metric in ("precision", "recall", "f1")
+    )
 
 
 def test_alert_feed_includes_a_variety_of_replay_categories():
@@ -87,8 +96,11 @@ def test_alert_feed_includes_a_variety_of_replay_categories():
 
     response = request("GET", "/api/alerts?limit=8")
     assert response.status_code == 200
-    categories = {alert["category"] for alert in response.json()["alerts"]}
+    alerts = response.json()["alerts"]
+    categories = {alert["category"] for alert in alerts}
     assert {"DoS", "Probe", "R2L", "U2R"}.issubset(categories)
+    assert len({alert["service"] for alert in alerts}) >= 3
+    assert any(alert["category"] == "Normal" for alert in alerts)
 
 
 def test_metrics_identify_readme_as_source():

@@ -132,6 +132,25 @@ def _dataset_source(replay):
     return "Replay of NSL-KDD test set" if replay is not None else "Unavailable"
 
 
+def _class_metrics(true_positive, false_positive, false_negative):
+    precision = (
+        true_positive / (true_positive + false_positive)
+        if true_positive + false_positive
+        else None
+    )
+    recall = (
+        true_positive / (true_positive + false_negative)
+        if true_positive + false_negative
+        else None
+    )
+    f1 = (
+        2 * precision * recall / (precision + recall)
+        if precision is not None and recall is not None and precision + recall
+        else None
+    )
+    return {"precision": precision, "recall": recall, "f1": f1}
+
+
 @app.get("/api/stats")
 def get_stats():
     replay = _replay()
@@ -146,6 +165,8 @@ def get_stats():
             "traffic": [],
             "categories": [],
             "detection_by_category": [],
+            "confusion_matrix": None,
+            "class_metrics": [],
         }
 
     rows = replay["rows"]
@@ -154,6 +175,12 @@ def get_stats():
     true_normals = [row for row in rows if row["true_label"] == "normal"]
     caught_attacks = sum(row["label"] == "attack" for row in true_attacks)
     false_alarms = sum(row["label"] == "attack" for row in true_normals)
+    missed_attacks = len(true_attacks) - caught_attacks
+    true_negatives = len(true_normals) - false_alarms
+    confusion_matrix = [
+        [true_negatives, false_alarms],
+        [missed_attacks, caught_attacks],
+    ]
     category_counts = {}
     for row in rows:
         category = row["category"]
@@ -189,6 +216,20 @@ def get_stats():
         "attacks_detected": len(attacks),
         "detection_rate": caught_attacks / len(true_attacks) if true_attacks else None,
         "false_positive_rate": false_alarms / len(true_normals) if true_normals else None,
+        "confusion_matrix": {
+            "labels": ["Normal", "Attack"],
+            "values": confusion_matrix,
+        },
+        "class_metrics": [
+            {
+                "name": "Normal",
+                **_class_metrics(true_negatives, missed_attacks, false_alarms),
+            },
+            {
+                "name": "Attack",
+                **_class_metrics(caught_attacks, false_alarms, missed_attacks),
+            },
+        ],
         "traffic": traffic,
         "categories": [
             {"name": name, "value": category_counts.get(name, 0)}
@@ -203,26 +244,21 @@ def get_alerts(limit: int = Query(default=10, ge=1, le=100)):
     replay = _replay()
     if replay is None:
         return {"status": "unavailable", "source": "Unavailable", "alerts": []}
-    alerts_by_category = {name: [] for name in ("DoS", "Probe", "R2L", "U2R", "Normal", "Other")}
-    for row in replay["rows"]:
-        if row["label"] == "attack":
-            alerts_by_category[row["category"]].append(row)
-    for category_alerts in alerts_by_category.values():
-        category_alerts.sort(key=lambda row: row["attack_probability"], reverse=True)
-
+    candidates = [row for row in replay["rows"] if row["label"] == "attack"]
     alerts = []
-    category_order = tuple(alerts_by_category)
     while len(alerts) < limit:
-        added = False
-        for category in category_order:
-            category_alerts = alerts_by_category[category]
-            if category_alerts:
-                alerts.append(category_alerts.pop(0))
-                added = True
-                if len(alerts) == limit:
-                    break
-        if not added:
+        if not candidates:
             break
+        next_index = min(
+            range(len(candidates)),
+            key=lambda index: (
+                sum(row["category"] == candidates[index]["category"] for row in alerts),
+                sum(row["service"] == candidates[index]["service"] for row in alerts),
+                -candidates[index]["attack_probability"],
+                candidates[index]["row"],
+            ),
+        )
+        alerts.append(candidates.pop(next_index))
 
     return {
         "status": "available",
