@@ -107,6 +107,29 @@ python -m pip install -r requirements.txt
 ```
  
 Put `KDDTrain.parquet` and `KDDTest.parquet` in `data/`, then open `notebooks/01_baseline.ipynb` and run all cells. Developed with Python 3.15 in a virtual environment.
+
+### Streamlit app
+
+With the virtual environment active and dependencies installed, run:
+
+```bash
+streamlit run app.py
+```
+
+### React dashboard and API
+
+The API serves the saved `models/xgboost.joblib` pipeline. If available, `data/KDDTest.parquet` (or `data/KDDTest+.txt`) is replayed through that model for dashboard data. Metrics displayed as model benchmarks are the values documented in this README.
+
+Install the frontend dependencies once, then start both servers from the repository root:
+
+```bash
+npm --prefix frontend install
+.\dev.ps1
+```
+
+The UI runs at `http://localhost:5173` and the API at `http://127.0.0.1:8000`. Configure the frontend API URL in `frontend/.env` using `frontend/.env.example` as a template. Run API tests with `python -m pytest -rs`.
+
+The parity test uses the first 20 rows of `data/KDDTest+.txt` when that file is present. It is not included in the repository; without it, that specific test is skipped with a message. The available `data/KDDTest.parquet` is covered by a separate parity test.
  
 ## Repo structure
  
