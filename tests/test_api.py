@@ -116,7 +116,8 @@ def test_metrics_identify_readme_as_source():
 def test_predict_rejects_missing_model_features():
     response = request("POST", "/api/predict", json={"features": {"protocol_type": "tcp"}})
     assert response.status_code == 422
-    assert "Missing columns" in response.json()["detail"]
+    assert response.json()["error"]["code"] == "missing_columns"
+    assert "Missing required feature columns" in response.json()["error"]["message"]
 
 
 def test_batch_prediction_returns_predictions_from_uploaded_csv():
@@ -132,5 +133,6 @@ def test_batch_prediction_returns_predictions_from_uploaded_csv():
     )
     assert response.status_code == 200, response.text
     result = response.json()
-    assert result["count"] == 3
-    assert len(result["predictions"]) == 3
+    assert result["rows_received"] == 3
+    assert result["rows_scored"] == 3
+    assert len(result["results"]) == 3
